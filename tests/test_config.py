@@ -18,9 +18,9 @@ class TestConfig:
         
         assert config.speech_transcription_api == "http://localhost:8000/transcribe"
         assert config.speech_synthesis_api == "http://localhost:8080/synthesizeSpeech"
-        assert config.max_command_input_seconds == 30
+        assert config.max_command_input_seconds == 30  # noqa: PLR2004
         assert config.mqtt_server_host == "localhost"
-        assert config.mqtt_server_port == 1883
+        assert config.mqtt_server_port == 1883  # noqa: PLR2004
         assert config.broadcast_topic == "assistant/ground_station/broadcast"
 
     def test_config_topics(self):
@@ -63,8 +63,8 @@ class TestConfig:
             assert config.speech_transcription_api == "http://test:8000/stt"
             assert config.speech_synthesis_api == "http://test:8080/tts"
             assert config.mqtt_server_host == "test-mqtt"
-            assert config.mqtt_server_port == 1234
-            assert config.max_command_input_seconds == 60
+            assert config.mqtt_server_port == 1234  # noqa: PLR2004
+            assert config.max_command_input_seconds == 60  # noqa: PLR2004
         finally:
             config_path.unlink()
 

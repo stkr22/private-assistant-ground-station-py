@@ -1,10 +1,8 @@
 """Tests for audio processing module."""
 
-import asyncio
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import numpy as np
 import pytest
 
 from app.utils.client_config import ClientConfig
@@ -20,14 +18,14 @@ class TestAudioConfig:
         """Test AudioConfig creation with defaults."""
         config = AudioConfig(max_frames=48000)
         
-        assert config.max_frames == 48000
+        assert config.max_frames == 48000  # noqa: PLR2004
         assert config.max_buffer_size == 1024 * 1024  # 1MB
 
     def test_audio_config_custom_buffer_size(self):
         """Test AudioConfig with custom buffer size."""
         config = AudioConfig(max_frames=32000, max_buffer_size=512 * 1024)
         
-        assert config.max_frames == 32000
+        assert config.max_frames == 32000  # noqa: PLR2004
         assert config.max_buffer_size == 512 * 1024
 
 
@@ -37,8 +35,7 @@ class TestSatelliteAudioProcessor:
     @pytest.fixture
     def mock_websocket(self):
         """Create mock WebSocket."""
-        websocket = AsyncMock()
-        return websocket
+        return AsyncMock()
 
     @pytest.fixture
     def config_obj(self):

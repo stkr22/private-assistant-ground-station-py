@@ -82,7 +82,7 @@ class TestSupportUtils:
             support_utils.active_connections[connection_id] = mock_websocket
             connections[connection_id] = mock_websocket
         
-        assert len(support_utils.active_connections) == 5
+        assert len(support_utils.active_connections) == 5  # noqa: PLR2004
         
         # Verify all connections are present
         for connection_id, websocket in connections.items():
@@ -98,7 +98,7 @@ class TestSupportUtils:
             support_utils.mqtt_subscription_to_queue[topic] = queue
             subscriptions[topic] = queue
         
-        assert len(support_utils.mqtt_subscription_to_queue) == 3
+        assert len(support_utils.mqtt_subscription_to_queue) == 3  # noqa: PLR2004
         
         # Verify all subscriptions are present
         for topic, queue in subscriptions.items():
@@ -113,5 +113,5 @@ class TestSupportUtils:
         support_utils.mqtt_client = mock_client
         
         assert support_utils.config_obj.mqtt_server_host == "test-host"
-        assert support_utils.config_obj.mqtt_server_port == 9999
+        assert support_utils.config_obj.mqtt_server_port == 9999  # noqa: PLR2004
         assert support_utils.mqtt_client is mock_client

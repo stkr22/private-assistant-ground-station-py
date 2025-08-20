@@ -1,13 +1,12 @@
 """Tests for main application module."""
 
 import asyncio
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, decode_message_payload, setup_satellite_connection
+from app.main import app, decode_message_payload, setup_satellite_connection, websocket_endpoint
 
 
 class TestUtilityFunctions:
@@ -39,7 +38,7 @@ class TestUtilityFunctions:
 
     def test_decode_message_payload_unicode(self):
         """Test decoding unicode payload."""
-        payload = "test message with unicode: 你好".encode('utf-8')
+        payload = "test message with unicode: 你好".encode()
         result = decode_message_payload(payload)
         assert result == "test message with unicode: 你好"
 
@@ -55,28 +54,28 @@ class TestHTTPEndpoints:
     def test_health_endpoint(self, client):
         """Test health endpoint."""
         response = client.get("/health")
-        assert response.status_code == 200
+        assert response.status_code == 200  # noqa: PLR2004
         assert response.json() == {"status": "healthy"}
 
     @patch('app.main.sup_util.active_connections', {})
     def test_accepts_connections_empty(self, client):
         """Test accepts connections endpoint with no active connections."""
         response = client.get("/acceptsConnections")
-        assert response.status_code == 200
+        assert response.status_code == 200  # noqa: PLR2004
         data = response.json()
         assert data["status"] == "ready"
         assert data["active_connections"] == 0
-        assert data["max_connections"] == 50
+        assert data["max_connections"] == 50  # noqa: PLR2004
 
     @patch('app.main.sup_util.active_connections', {1: "ws1", 2: "ws2"})
     def test_accepts_connections_with_connections(self, client):
         """Test accepts connections endpoint with active connections."""
         response = client.get("/acceptsConnections")
-        assert response.status_code == 200
+        assert response.status_code == 200  # noqa: PLR2004
         data = response.json()
         assert data["status"] == "ready"
-        assert data["active_connections"] == 2
-        assert data["max_connections"] == 50
+        assert data["active_connections"] == 2  # noqa: PLR2004
+        assert data["max_connections"] == 50  # noqa: PLR2004
 
 
 class TestWebSocketHandling:
@@ -85,8 +84,7 @@ class TestWebSocketHandling:
     @pytest.fixture
     def mock_websocket(self):
         """Create mock WebSocket."""
-        websocket = AsyncMock()
-        return websocket
+        return AsyncMock()
 
     @pytest.fixture
     def mock_sup_util(self):
@@ -138,7 +136,7 @@ class TestWebSocketHandling:
             "assistant/test_room/output", qos=1
         )
 
-    async def test_setup_satellite_connection_invalid_config(self, mock_websocket, mock_sup_util):
+    async def test_setup_satellite_connection_invalid_config(self, mock_websocket):
         """Test satellite connection setup with invalid config."""
         # Setup invalid config data
         mock_websocket.receive_json.return_value = {"invalid": "config"}
@@ -164,7 +162,6 @@ class TestWebSocketEndpoint:
     async def test_websocket_endpoint_success(self, mock_sup_util, mock_handle_messages,
                                             mock_setup, mock_websocket):
         """Test successful WebSocket endpoint execution."""
-        from app.main import websocket_endpoint
         
         # Setup mocks
         mock_sup_util.active_connections = {}
@@ -181,8 +178,6 @@ class TestWebSocketEndpoint:
         # Verify WebSocket accepted
         mock_websocket.accept.assert_called_once()
         
-        # Verify connection added and removed
-        connection_id = id(mock_websocket)
         # Note: Connection cleanup happens in finally block
         
         # Verify setup and message handling called
@@ -192,7 +187,6 @@ class TestWebSocketEndpoint:
     @patch('app.main.sup_util')
     async def test_websocket_endpoint_duplicate_connection(self, mock_sup_util, mock_websocket):
         """Test WebSocket endpoint with duplicate connection."""
-        from app.main import websocket_endpoint
         
         # Setup existing connection
         connection_id = id(mock_websocket)
@@ -210,7 +204,6 @@ class TestWebSocketEndpoint:
     @patch('app.main.sup_util')
     async def test_websocket_endpoint_setup_error(self, mock_sup_util, mock_setup, mock_websocket):
         """Test WebSocket endpoint with setup error."""
-        from app.main import websocket_endpoint
         
         # Setup mocks
         mock_sup_util.active_connections = {}
@@ -226,7 +219,6 @@ class TestWebSocketEndpoint:
     @patch('app.main.sup_util')
     async def test_websocket_endpoint_unexpected_error(self, mock_sup_util, mock_setup, mock_websocket):
         """Test WebSocket endpoint with unexpected error."""
-        from app.main import websocket_endpoint
         
         # Setup mocks
         mock_sup_util.active_connections = {}
