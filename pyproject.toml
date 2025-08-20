@@ -29,9 +29,9 @@ dependencies = [
     "pyyaml~=6.0.1",
     "pydantic~=2.9.0",
     "private-assistant-commons~=3.6.0",
-    "fastapi[standard]~=0.115.6",
+    "fastapi[standard]~=0.116.1",
     "aiomqtt~=2.4.0",
-    "numpy==1.26.4",
+    "numpy~=2.3.2",
 ]
 
 [project.urls]

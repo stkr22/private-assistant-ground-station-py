@@ -1,9 +1,9 @@
 """Pytest configuration and shared fixtures."""
 
-import asyncio
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 import yaml
 
@@ -50,24 +50,18 @@ def test_config():
 @pytest.fixture
 def sample_audio_data():
     """Create sample audio data for testing."""
-    import numpy as np
-    
     # Generate 1 second of sine wave at 16kHz
     sample_rate = 16000
     duration = 1.0
     frequency = 440.0  # A4 note
     
     t = np.linspace(0, duration, int(sample_rate * duration), False)
-    audio = np.sin(2 * np.pi * frequency * t).astype(np.float32)
-    
-    return audio
+    return np.sin(2 * np.pi * frequency * t).astype(np.float32)
 
 
 @pytest.fixture
 def sample_audio_bytes():
     """Create sample audio bytes for testing."""
-    import numpy as np
-    
     # Generate some int16 audio data
     audio_int16 = np.array([1000, 2000, 3000, 4000, 5000], dtype=np.int16)
     return audio_int16.tobytes()

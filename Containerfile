@@ -32,7 +32,6 @@ WORKDIR /app
 # Copy virtual environment from build stage
 COPY --from=build-python /app/.venv /app/.venv
 
-COPY assets /app/assets
 COPY src/app /app/app
 
 ENV PATH="/app/.venv/bin:$PATH"
