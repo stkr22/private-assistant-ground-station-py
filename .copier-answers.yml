@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier
+_commit: v3.1.0
+_src_path: https://github.com/stkr22/copier-python-project.git
+author_email: stkr22@github.com
+author_full_name: stkr22
+codeowner_username: '@stkr22'
+copyright_license: GPL-3.0
+github_repository_name: private-assistant-comms-bridge-py
+github_username: stkr22
+project_description: Comms Bridge is an open-source endpoint designed to facilitate
+    speech interaction within smart assistant systems, optimized for operation on
+    edge devices.
+project_name: Private Assistant Comms Bridge
+publish_to_pypi: false
+python_package_distribution_name: private-assistant-comms-bridge
+python_package_import_name: app
+python_package_version: 2.1.1
+use_containers: true
