@@ -19,15 +19,15 @@ def temp_config_file():
         "mqtt_server_host": "localhost",
         "mqtt_server_port": 1883,
         "max_command_input_seconds": 30,
-        "client_id": "test-ground-station"
+        "client_id": "test-ground-station",
     }
-    
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         yaml.safe_dump(config_data, f)
         config_path = Path(f.name)
-    
+
     yield config_path
-    
+
     # Cleanup
     config_path.unlink()
 
@@ -43,7 +43,7 @@ def test_config():
         mqtt_server_host="test-mqtt",
         mqtt_server_port=1883,
         max_command_input_seconds=15,
-        client_id="test-station"
+        client_id="test-station",
     )
 
 
@@ -54,7 +54,7 @@ def sample_audio_data():
     sample_rate = 16000
     duration = 1.0
     frequency = 440.0  # A4 note
-    
+
     t = np.linspace(0, duration, int(sample_rate * duration), False)
     return np.sin(2 * np.pi * frequency * t).astype(np.float32)
 
@@ -70,6 +70,4 @@ def sample_audio_bytes():
 # Async test markers
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "asyncio: mark test as async"
-    )
+    config.addinivalue_line("markers", "asyncio: mark test as async")

@@ -20,7 +20,7 @@ from app.utils import (
 
 class ProcessingState(Enum):
     IDLE = "idle"
-    COLLECTING_AUDIO = "collecting_audio" 
+    COLLECTING_AUDIO = "collecting_audio"
     PROCESSING_STT = "processing_stt"
 
 
@@ -46,11 +46,11 @@ class SatelliteAudioProcessor:
         self.client_conf = client_conf
         self.logger = logger
         self.sup_util = sup_util
-        
+
         self.audio_config = AudioConfig(
             max_frames=config_obj.max_command_input_seconds * client_conf.samplerate,
         )
-        
+
         # Audio processing state
         self.state = ProcessingState.IDLE
         self.audio_buffer: list[bytes] = []
@@ -59,7 +59,7 @@ class SatelliteAudioProcessor:
     async def handle_control_signal(self, signal: str) -> None:
         """Handle control signals from satellite."""
         self.logger.debug("Received control signal: %s", signal)
-        
+
         if signal == "START_COMMAND":
             await self._start_audio_collection()
         elif signal == "END_COMMAND":
@@ -84,7 +84,7 @@ class SatelliteAudioProcessor:
         # Add to buffer
         self.audio_buffer.append(audio_bytes)
         self._buffer_size_bytes += len(audio_bytes)
-        
+
         self.logger.debug("Collected audio chunk (buffer size: %d bytes)", self._buffer_size_bytes)
 
         # Check if we've exceeded the maximum audio duration
@@ -127,21 +127,20 @@ class SatelliteAudioProcessor:
             return
 
         self.state = ProcessingState.PROCESSING_STT
-        
+
         try:
             # Concatenate all audio chunks
             full_audio_bytes = b"".join(self.audio_buffer)
             audio_array = np.frombuffer(full_audio_bytes, dtype=np.int16)
-            
-            self.logger.info("Processing %d bytes of audio (%d samples)", 
-                           len(full_audio_bytes), len(audio_array))
+
+            self.logger.info("Processing %d bytes of audio (%d samples)", len(full_audio_bytes), len(audio_array))
 
             # Convert to float32 for STT API
             audio_float = srt.int2float(audio_array)
-            
+
             # Send to STT API
             response = await srt.send_audio_to_stt_api(audio_float, config_obj=self.config_obj)
-            
+
             if response is None:
                 self.logger.error("Failed to get STT response")
                 await self._send_error_feedback()
@@ -157,12 +156,17 @@ class SatelliteAudioProcessor:
                 output_topic=self.client_conf.output_topic,
             )
 
-            await self.sup_util.mqtt_client.publish(
+            # Use safe_publish to handle disconnection gracefully
+            published = await self.sup_util.safe_publish(
                 self.config_obj.input_topic,
                 request.model_dump_json(),
                 qos=1,
             )
-            self.logger.info("Published STT result to MQTT")
+
+            if published:
+                self.logger.info("Published STT result to MQTT")
+            else:
+                self.logger.warning("Failed to publish STT result: MQTT disconnected, message discarded")
 
         except Exception as e:
             self.logger.error("Error processing audio: %s", e)
@@ -178,17 +182,17 @@ class SatelliteAudioProcessor:
         sample_rate = self.client_conf.samplerate
         samples = int(sample_rate * duration)
         t = np.linspace(0, duration, samples, False)
-        
+
         # Generate beep with fade in/out to avoid clicks
         beep = np.sin(2 * math.pi * frequency * t)
         fade_samples = int(sample_rate * 0.05)  # 50ms fade
-        
+
         if fade_samples > 0:
             fade_in = np.linspace(0, 1, fade_samples)
             fade_out = np.linspace(1, 0, fade_samples)
             beep[:fade_samples] *= fade_in
             beep[-fade_samples:] *= fade_out
-        
+
         # Convert to 16-bit PCM
         beep_int16 = (beep * 32767).astype(np.int16)
         return bytes(beep_int16.tobytes())
