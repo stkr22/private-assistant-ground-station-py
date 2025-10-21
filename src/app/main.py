@@ -44,6 +44,12 @@ def decode_message_payload(payload) -> str | None:
 
 
 async def listen(client: aiomqtt.Client, sup_util: support_utils.SupportUtils):
+    """
+    Listen for MQTT messages and route them to appropriate queues.
+
+    Note: If connection is lost during iteration, aiomqtt.MqttError will be raised
+    and caught by the reconnection loop in lifespan().
+    """
     async for message in client.messages:
         topic_queue = sup_util.mqtt_subscription_to_queue.get(message.topic.value)
         logger.debug("Received message: %s", message)
@@ -63,21 +69,66 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     sup_util.config_obj = config.load_config(
         pathlib.Path(os.getenv("PRIVATE_ASSISTANT_API_CONFIG_PATH", "local_config.yaml"))
     )
-    async with aiomqtt.Client(
-        hostname=sup_util.config_obj.mqtt_server_host, port=sup_util.config_obj.mqtt_server_port
-    ) as c:
-        # Make client globally available
-        sup_util.mqtt_client = c
-        # Listen for MQTT messages in (unawaited) asyncio task
-        await sup_util.mqtt_client.subscribe(sup_util.config_obj.broadcast_topic, qos=1)
-        loop = asyncio.get_event_loop()
-        task = loop.create_task(listen(sup_util.mqtt_client, sup_util=sup_util))
+
+    # AIDEV-NOTE: Reconnection loop with exponential backoff for MQTT resilience
+    reconnect_delay = 5  # Initial delay in seconds
+    max_reconnect_delay = 60  # Maximum delay in seconds
+    task = None
+
+    # Store the broadcast topic in subscriptions set for restoration
+    sup_util.mqtt_subscriptions.add(sup_util.config_obj.broadcast_topic)
+
+    async def connect_and_listen():
+        """Connect to MQTT and listen for messages with automatic reconnection."""
+        nonlocal reconnect_delay
+
+        while True:
+            try:
+                logger.info(
+                    "Connecting to MQTT broker at %s:%s",
+                    sup_util.config_obj.mqtt_server_host,
+                    sup_util.config_obj.mqtt_server_port,
+                )
+
+                async with aiomqtt.Client(
+                    hostname=sup_util.config_obj.mqtt_server_host, port=sup_util.config_obj.mqtt_server_port
+                ) as client:
+                    # Make client globally available
+                    sup_util.mqtt_client = client
+                    sup_util.mqtt_connected = True
+
+                    # Subscribe to all tracked topics (includes broadcast + per-client topics)
+                    for topic in sup_util.mqtt_subscriptions:
+                        await client.subscribe(topic, qos=1)
+                        logger.debug("Subscribed to MQTT topic: %s", topic)
+
+                    logger.info("MQTT connected and subscriptions restored")
+                    reconnect_delay = 5  # Reset backoff on successful connection
+
+                    # Listen for messages
+                    await listen(client, sup_util=sup_util)
+
+            except aiomqtt.MqttError as e:
+                sup_util.mqtt_connected = False
+                logger.error("MQTT connection lost: %s. Reconnecting in %s seconds...", e, reconnect_delay)
+                await asyncio.sleep(reconnect_delay)
+                # Exponential backoff with maximum limit
+                reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
+
+    # Start the connection task
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(connect_and_listen())
+
+    try:
         yield
-        # Cancel the task
-        task.cancel()
-        # Wait for the task to be cancelled
-        with suppress(asyncio.CancelledError):
-            await task
+    finally:
+        # Cancel the task on shutdown
+        if task:
+            task.cancel()
+            # Wait for the task to be cancelled
+            with suppress(asyncio.CancelledError):
+                await task
+        sup_util.mqtt_connected = False
 
 
 app = FastAPI(lifespan=lifespan)
@@ -92,9 +143,9 @@ async def health() -> dict:
 async def accepts_connection():
     """Endpoint to check if the app can accept new WebSocket connections."""
     return {
-        "status": "ready", 
+        "status": "ready",
         "active_connections": len(sup_util.active_connections),
-        "max_connections": 50  # Configurable limit
+        "max_connections": 50,  # Configurable limit
     }
 
 
@@ -102,29 +153,33 @@ async def setup_satellite_connection(websocket: WebSocket):
     """Setup MQTT and audio processor for satellite connection."""
     client_config_raw = await websocket.receive_json()
     client_conf = client_config.ClientConfig.model_validate(client_config_raw)
-    
+
     # Setup MQTT subscription for this client
     output_queue: asyncio.Queue[messages.Response] = asyncio.Queue()
     output_topic = f"assistant/{client_conf.room}/output"
     client_conf.output_topic = output_topic
     sup_util.mqtt_subscription_to_queue[output_topic] = output_queue
-    await sup_util.mqtt_client.subscribe(output_topic, qos=1)
+
+    # Add to tracked subscriptions for automatic restoration after reconnection
+    sup_util.mqtt_subscriptions.add(output_topic)
+
+    # Subscribe if currently connected
+    if sup_util.is_mqtt_connected():
+        await sup_util.mqtt_client.subscribe(output_topic, qos=1)
+
     sup_util.mqtt_subscription_to_queue[sup_util.config_obj.broadcast_topic] = output_queue
 
     # AIDEV-NOTE: New ground station protocol - handle satellite communication
     audio_processor = processing_sound.SatelliteAudioProcessor(
-        websocket=websocket,
-        config_obj=sup_util.config_obj,
-        client_conf=client_conf,
-        logger=logger,
-        sup_util=sup_util
+        websocket=websocket, config_obj=sup_util.config_obj, client_conf=client_conf, logger=logger, sup_util=sup_util
     )
-    
+
     return client_conf, output_queue, audio_processor
 
 
 async def handle_satellite_messages(websocket: WebSocket, audio_processor, output_queue, client_conf):
     """Handle satellite WebSocket messages and MQTT responses."""
+
     async def handle_mqtt_responses():
         while True:
             try:
@@ -136,17 +191,17 @@ async def handle_satellite_messages(websocket: WebSocket, audio_processor, outpu
 
     # Start MQTT response handler
     mqtt_task = asyncio.create_task(handle_mqtt_responses())
-    
+
     try:
         # Main message loop
         while True:
             message = await websocket.receive()
-            
+
             if "text" in message:
                 # Handle control signals from satellite
                 control_signal = message["text"]
                 await audio_processor.handle_control_signal(control_signal)
-                
+
             elif "bytes" in message:
                 # Handle audio data from satellite
                 audio_bytes = message["bytes"]
@@ -158,7 +213,7 @@ async def handle_satellite_messages(websocket: WebSocket, audio_processor, outpu
             await mqtt_task
 
 
-@app.websocket("/satellite")  
+@app.websocket("/satellite")
 async def websocket_endpoint(websocket: WebSocket):
     connection_id = id(websocket)
     if connection_id in sup_util.active_connections:
@@ -168,7 +223,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     sup_util.active_connections[connection_id] = websocket
     output_topic = None
-    
+
     try:
         client_conf, output_queue, audio_processor = await setup_satellite_connection(websocket)
         output_topic = client_conf.output_topic
@@ -188,13 +243,17 @@ async def websocket_endpoint(websocket: WebSocket):
         if connection_id in sup_util.active_connections:
             del sup_util.active_connections[connection_id]
         # Cleanup MQTT subscription
-        if output_topic and output_topic in sup_util.mqtt_subscription_to_queue:
-            del sup_util.mqtt_subscription_to_queue[output_topic]
+        if output_topic:
+            # Remove from tracking set
+            sup_util.mqtt_subscriptions.discard(output_topic)
+            # Remove from queue mapping
+            if output_topic in sup_util.mqtt_subscription_to_queue:
+                del sup_util.mqtt_subscription_to_queue[output_topic]
 
 
 async def process_output_queue(
-    websocket: WebSocket, 
-    output_queue: asyncio.Queue[messages.Response], 
+    websocket: WebSocket,
+    output_queue: asyncio.Queue[messages.Response],
     config_obj: config.Config,
     client_conf: client_config.ClientConfig,
 ):
@@ -218,5 +277,3 @@ async def process_output_queue(
         if processed_count > 0:
             logger.debug("Processed %d messages from output queue", processed_count)
         # No more messages to process
-
-
