@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.1.0...v0.1.1) (2025-10-21)
+
+
+### Bug Fixes
+
+* :bug: implement automatic MQTT reconnection [AI] ([0352101](https://github.com/stkr22/private-assistant-ground-station-py/commit/0352101a19e341d9d48cbad9ec86a1bac5fa2c5a)), closes [#5](https://github.com/stkr22/private-assistant-ground-station-py/issues/5)
+* implement automatic MQTT reconnection ([0e0372d](https://github.com/stkr22/private-assistant-ground-station-py/commit/0e0372d6e97f5c634aedb1415a4e67b3b156ffa8))
+
 ## 0.1.0 (2025-08-20)
 
 
