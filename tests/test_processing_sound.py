@@ -56,7 +56,6 @@ class TestSatelliteAudioProcessor:
         """Create mock support utilities."""
         sup_util = MagicMock(spec=SupportUtils)
         sup_util.mqtt_client = AsyncMock()
-        sup_util.safe_publish = AsyncMock(return_value=True)
         return sup_util
 
     @pytest.fixture
@@ -186,11 +185,8 @@ class TestSatelliteAudioProcessor:
         # Verify STT was called
         mock_stt.assert_called_once()
 
-        # Verify MQTT publish was called via safe_publish
-        sup_util.safe_publish.assert_called_once()
-        # Verify the call was made with correct parameters
-        call_args = sup_util.safe_publish.call_args
-        assert call_args.kwargs.get("qos") == 1
+        # Verify MQTT publish was called
+        sup_util.mqtt_client.publish.assert_called_once()
 
         # Verify state reset
         assert processor.state == ProcessingState.IDLE

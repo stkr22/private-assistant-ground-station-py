@@ -75,9 +75,6 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     max_reconnect_delay = 60  # Maximum delay in seconds
     task = None
 
-    # Store the broadcast topic in subscriptions set for restoration
-    sup_util.mqtt_subscriptions.add(sup_util.config_obj.broadcast_topic)
-
     async def connect_and_listen():
         """Connect to MQTT and listen for messages with automatic reconnection."""
         nonlocal reconnect_delay
@@ -97,12 +94,9 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
                     sup_util.mqtt_client = client
                     sup_util.mqtt_connected = True
 
-                    # Subscribe to all tracked topics (includes broadcast + per-client topics)
-                    for topic in sup_util.mqtt_subscriptions:
-                        await client.subscribe(topic, qos=1)
-                        logger.debug("Subscribed to MQTT topic: %s", topic)
-
-                    logger.info("MQTT connected and subscriptions restored")
+                    # Subscribe to broadcast topic
+                    await client.subscribe(sup_util.config_obj.broadcast_topic, qos=1)
+                    logger.info("MQTT connected successfully")
                     reconnect_delay = 5  # Reset backoff on successful connection
 
                     # Listen for messages
@@ -111,6 +105,16 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
             except aiomqtt.MqttError as e:
                 sup_util.mqtt_connected = False
                 logger.error("MQTT connection lost: %s. Reconnecting in %s seconds...", e, reconnect_delay)
+
+                # Close all active WebSocket connections
+                connections_to_close = list(sup_util.active_connections.values())
+                for websocket in connections_to_close:
+                    try:
+                        await websocket.close(code=1011, reason="MQTT connection lost")
+                        logger.info("Closed WebSocket connection due to MQTT disconnect")
+                    except Exception as close_error:
+                        logger.warning("Error closing WebSocket: %s", close_error)
+
                 await asyncio.sleep(reconnect_delay)
                 # Exponential backoff with maximum limit
                 reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
@@ -160,12 +164,8 @@ async def setup_satellite_connection(websocket: WebSocket):
     client_conf.output_topic = output_topic
     sup_util.mqtt_subscription_to_queue[output_topic] = output_queue
 
-    # Add to tracked subscriptions for automatic restoration after reconnection
-    sup_util.mqtt_subscriptions.add(output_topic)
-
-    # Subscribe if currently connected
-    if sup_util.is_mqtt_connected():
-        await sup_util.mqtt_client.subscribe(output_topic, qos=1)
+    # Subscribe to client-specific topic (MQTT is guaranteed to be connected)
+    await sup_util.mqtt_client.subscribe(output_topic, qos=1)
 
     sup_util.mqtt_subscription_to_queue[sup_util.config_obj.broadcast_topic] = output_queue
 
@@ -221,6 +221,13 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     await websocket.accept()
+
+    # Check if MQTT is connected before allowing WebSocket connection
+    if not sup_util.mqtt_connected:
+        logger.warning("Rejecting WebSocket connection: MQTT not connected")
+        await websocket.close(code=1011, reason="MQTT broker unavailable")
+        return
+
     sup_util.active_connections[connection_id] = websocket
     output_topic = None
 
@@ -242,13 +249,9 @@ async def websocket_endpoint(websocket: WebSocket):
         # Cleanup connection
         if connection_id in sup_util.active_connections:
             del sup_util.active_connections[connection_id]
-        # Cleanup MQTT subscription
-        if output_topic:
-            # Remove from tracking set
-            sup_util.mqtt_subscriptions.discard(output_topic)
-            # Remove from queue mapping
-            if output_topic in sup_util.mqtt_subscription_to_queue:
-                del sup_util.mqtt_subscription_to_queue[output_topic]
+        # Cleanup MQTT subscription queue mapping
+        if output_topic and output_topic in sup_util.mqtt_subscription_to_queue:
+            del sup_util.mqtt_subscription_to_queue[output_topic]
 
 
 async def process_output_queue(

@@ -156,17 +156,12 @@ class SatelliteAudioProcessor:
                 output_topic=self.client_conf.output_topic,
             )
 
-            # Use safe_publish to handle disconnection gracefully
-            published = await self.sup_util.safe_publish(
+            await self.sup_util.mqtt_client.publish(
                 self.config_obj.input_topic,
                 request.model_dump_json(),
                 qos=1,
             )
-
-            if published:
-                self.logger.info("Published STT result to MQTT")
-            else:
-                self.logger.warning("Failed to publish STT result: MQTT disconnected, message discarded")
+            self.logger.info("Published STT result to MQTT")
 
         except Exception as e:
             self.logger.error("Error processing audio: %s", e)
