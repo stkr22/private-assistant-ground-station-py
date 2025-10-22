@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.1.1...v0.2.0) (2025-10-22)
+
+
+### Features
+
+* :sparkles: close WebSockets when MQTT disconnects [AI] ([99956a8](https://github.com/stkr22/private-assistant-ground-station-py/commit/99956a896199326c1e6f2f885132ec1ad51f18b3))
+* :sparkles: close WebSockets when MQTT disconnects [AI] ([747ce47](https://github.com/stkr22/private-assistant-ground-station-py/commit/747ce47b80f2b843886fd331b89b7827bb095f6e))
+
 ## [0.1.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.1.0...v0.1.1) (2025-10-21)
 
 
