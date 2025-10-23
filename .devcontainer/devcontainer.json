@@ -1,6 +1,6 @@
 {
-	"name": "private-assistant-comms-bridge-dev-environment",
-    "image": "ghcr.io/stkr22/devcontainer-python-container:1.2.2@sha256:4378cd81b5e7b77159aa294ef1322a61628fbb5b087567966016e385ea0ed788",
+	"name": "private-assistant-ground-station-dev-environment",
+    "image": "ghcr.io/stkr22/devcontainer-python-container:1.2.3@sha256:a603226b921a1d5ffa7beea34471c0ec830f6c5ab0878a0d198be862bb06f523",
 	"runArgs": [
 		"--cap-add=NET_RAW" // Needed for Claude Code IDE integration
 	],
