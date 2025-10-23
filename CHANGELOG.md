@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.2.0...v0.2.1) (2025-10-23)
+
+
+### Miscellaneous Chores
+
+* update container image and deps ([084bd90](https://github.com/stkr22/private-assistant-ground-station-py/commit/084bd90bd33db46cbbc6d7c66eb986c7c932131b))
+
 ## [0.2.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.1.1...v0.2.0) (2025-10-22)
 
 
