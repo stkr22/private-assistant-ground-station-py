@@ -5,16 +5,18 @@ import logging
 import os
 import pathlib
 import sys
+import uuid
 from contextlib import asynccontextmanager, suppress
 
 import aiomqtt
 import pydantic
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from private_assistant_commons import messages
 
 from app.utils import (
     client_config,
     config,
+    models,
     processing_sound,
     speech_recognition_tools,
     support_utils,
@@ -151,6 +153,74 @@ async def accepts_connection():
         "active_connections": len(sup_util.active_connections),
         "max_connections": 50,  # Configurable limit
     }
+
+
+@app.put("/text")
+async def put_text_message(
+    request: models.TextMessageRequest,
+    authorization: str | None = Header(None),
+) -> models.TextMessageResponse:
+    """
+    Accept transcribed text from external devices (e.g., Apple Watch).
+
+    Publishes the text to MQTT with the broadcast topic as output_topic,
+    allowing any WebSocket-connected devices at home to receive the response.
+
+    Args:
+        request: The text message request containing text and device_id
+        authorization: Bearer token for authentication
+
+    Returns:
+        TextMessageResponse with status and request_id for tracking
+
+    Raises:
+        HTTPException: 401 if unauthorized, 503 if MQTT unavailable
+    """
+    # Validate authentication token
+    if authorization is None:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    # Extract token from "Bearer <token>" format
+    token = authorization.removeprefix("Bearer ").strip()
+    if token != sup_util.config_obj.put_endpoint_token:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+    # Check MQTT connection
+    if not sup_util.mqtt_connected:
+        raise HTTPException(status_code=503, detail="MQTT broker unavailable")
+
+    # Generate unique request ID
+    request_id = uuid.uuid4()
+
+    # Create MQTT request with broadcast topic as output
+    mqtt_request = messages.ClientRequest(
+        id=request_id,
+        text=request.text,
+        room=request.device_id,  # Use device_id as room identifier
+        output_topic=sup_util.config_obj.broadcast_topic,
+    )
+
+    # Publish to MQTT input topic
+    try:
+        await sup_util.mqtt_client.publish(
+            sup_util.config_obj.input_topic,
+            mqtt_request.model_dump_json(),
+            qos=1,
+        )
+        logger.info(
+            "Published text message from device %s (request_id: %s)",
+            request.device_id,
+            request_id,
+        )
+    except Exception as e:
+        logger.error("Failed to publish MQTT message: %s", e)
+        raise HTTPException(status_code=503, detail="Failed to publish message to MQTT broker") from e
+
+    # Return immediately - response will be broadcast to WebSocket clients
+    return models.TextMessageResponse(
+        status="accepted",
+        request_id=str(request_id),
+    )
 
 
 async def setup_satellite_connection(websocket: WebSocket):

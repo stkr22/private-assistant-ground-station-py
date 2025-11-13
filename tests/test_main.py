@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, decode_message_payload, setup_satellite_connection, websocket_endpoint
+from app.main import app, decode_message_payload, setup_satellite_connection, sup_util, websocket_endpoint
 
 
 class TestUtilityFunctions:
@@ -76,6 +76,133 @@ class TestHTTPEndpoints:
         assert data["status"] == "ready"
         assert data["active_connections"] == 2  # noqa: PLR2004
         assert data["max_connections"] == 50  # noqa: PLR2004
+
+    @patch("app.main.sup_util.mqtt_connected", True)
+    def test_put_text_message_success(self, client):
+        """Test successful PUT /text endpoint."""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.input_topic = "assistant/ground_station/input"
+        mock_config.broadcast_topic = "assistant/ground_station/broadcast"
+        sup_util._config_obj = mock_config
+
+        mock_mqtt_client = AsyncMock()
+        mock_mqtt_client.publish = AsyncMock()
+        sup_util._mqtt_client = mock_mqtt_client
+
+        # Make request
+        response = client.put(
+            "/text",
+            json={"text": "test message", "device_id": "test_device"},
+            headers={"Authorization": "Bearer TEST_TOKEN"},
+        )
+
+        # Verify response
+        assert response.status_code == 200  # noqa: PLR2004
+        data = response.json()
+        assert data["status"] == "accepted"
+        assert "request_id" in data
+        assert len(data["request_id"]) > 0
+
+    def test_put_text_message_missing_auth(self, client):
+        """Test PUT /text endpoint with missing Authorization header."""
+        response = client.put(
+            "/text",
+            json={"text": "test message", "device_id": "test_device"},
+        )
+
+        assert response.status_code == 401  # noqa: PLR2004
+        assert response.json()["detail"] == "Missing Authorization header"
+
+    def test_put_text_message_invalid_token(self, client):
+        """Test PUT /text endpoint with invalid token."""
+        mock_config = MagicMock()
+        mock_config.put_endpoint_token = "CORRECT_TOKEN"
+        sup_util._config_obj = mock_config
+
+        response = client.put(
+            "/text",
+            json={"text": "test message", "device_id": "test_device"},
+            headers={"Authorization": "Bearer WRONG_TOKEN"},
+        )
+
+        assert response.status_code == 401  # noqa: PLR2004
+        assert response.json()["detail"] == "Invalid authentication token"
+
+    @patch("app.main.sup_util.mqtt_connected", False)
+    def test_put_text_message_mqtt_unavailable(self, client):
+        """Test PUT /text endpoint when MQTT is unavailable."""
+        mock_config = MagicMock()
+        mock_config.put_endpoint_token = "TEST_TOKEN"
+        sup_util._config_obj = mock_config
+
+        response = client.put(
+            "/text",
+            json={"text": "test message", "device_id": "test_device"},
+            headers={"Authorization": "Bearer TEST_TOKEN"},
+        )
+
+        assert response.status_code == 503  # noqa: PLR2004
+        assert response.json()["detail"] == "MQTT broker unavailable"
+
+    @patch("app.main.sup_util.mqtt_connected", True)
+    def test_put_text_message_mqtt_publish_failure(self, client):
+        """Test PUT /text endpoint when MQTT publish fails."""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.input_topic = "assistant/ground_station/input"
+        mock_config.broadcast_topic = "assistant/ground_station/broadcast"
+        sup_util._config_obj = mock_config
+
+        mock_mqtt_client = AsyncMock()
+        mock_mqtt_client.publish = AsyncMock(side_effect=Exception("MQTT publish failed"))
+        sup_util._mqtt_client = mock_mqtt_client
+
+        # Make request
+        response = client.put(
+            "/text",
+            json={"text": "test message", "device_id": "test_device"},
+            headers={"Authorization": "Bearer TEST_TOKEN"},
+        )
+
+        # Verify response
+        assert response.status_code == 503  # noqa: PLR2004
+        assert "Failed to publish message to MQTT broker" in response.json()["detail"]
+
+    @patch("app.main.sup_util.mqtt_connected", True)
+    def test_put_text_message_bearer_prefix_handling(self, client):
+        """Test PUT /text endpoint handles various Bearer token formats."""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.input_topic = "assistant/ground_station/input"
+        mock_config.broadcast_topic = "assistant/ground_station/broadcast"
+        sup_util._config_obj = mock_config
+
+        mock_mqtt_client = AsyncMock()
+        mock_mqtt_client.publish = AsyncMock()
+        sup_util._mqtt_client = mock_mqtt_client
+
+        # Test with extra spaces
+        response = client.put(
+            "/text",
+            json={"text": "test message", "device_id": "test_device"},
+            headers={"Authorization": "Bearer  TEST_TOKEN  "},
+        )
+
+        assert response.status_code == 200  # noqa: PLR2004
+
+    def test_put_text_message_invalid_request_body(self, client):
+        """Test PUT /text endpoint with invalid request body."""
+        response = client.put(
+            "/text",
+            json={"text": "test message"},  # missing device_id
+            headers={"Authorization": "Bearer TEST_TOKEN"},
+        )
+
+        assert response.status_code == 422  # noqa: PLR2004  # Unprocessable Entity
 
 
 class TestWebSocketHandling:
