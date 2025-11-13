@@ -53,8 +53,33 @@ async def listen(client: aiomqtt.Client, sup_util: support_utils.SupportUtils):
     and caught by the reconnection loop in lifespan().
     """
     async for message in client.messages:
-        topic_queue = sup_util.mqtt_subscription_to_queue.get(message.topic.value)
         logger.debug("Received message: %s", message)
+
+        # Handle broadcast messages specially - forward to all connected satellites
+        if message.topic.value == sup_util.config_obj.broadcast_topic:
+            payload_str = decode_message_payload(message.payload)
+            if payload_str is not None:
+                # Get all satellite queues (topics ending with /output)
+                satellite_queues = [
+                    (topic, queue)
+                    for topic, queue in sup_util.mqtt_subscription_to_queue.items()
+                    if topic.endswith("/output")
+                ]
+
+                if satellite_queues:
+                    try:
+                        response = messages.Response.model_validate_json(payload_str)
+                        for _, queue in satellite_queues:
+                            await queue.put(response)
+                        logger.info("Broadcast message forwarded to %d satellite(s)", len(satellite_queues))
+                    except pydantic.ValidationError:
+                        logger.error("Broadcast message failed validation. %s", payload_str)
+                else:
+                    logger.debug("Broadcast message received but no satellites connected")
+            continue
+
+        # Normal queue lookup for non-broadcast messages
+        topic_queue = sup_util.mqtt_subscription_to_queue.get(message.topic.value)
         if topic_queue is None:
             logger.warning("%s seems to have no queue. Discarding message.", message.topic)
         else:

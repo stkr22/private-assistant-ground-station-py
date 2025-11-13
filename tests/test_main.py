@@ -1,12 +1,14 @@
 """Tests for main application module."""
 
 import asyncio
+import logging
+from contextlib import suppress
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, decode_message_payload, setup_satellite_connection, sup_util, websocket_endpoint
+from app.main import app, decode_message_payload, listen, setup_satellite_connection, sup_util, websocket_endpoint
 
 
 class TestUtilityFunctions:
@@ -41,6 +43,151 @@ class TestUtilityFunctions:
         payload = "test message with unicode: 你好".encode()
         result = decode_message_payload(payload)
         assert result == "test message with unicode: 你好"
+
+
+class TestListenFunction:
+    """Test listen function for MQTT message handling."""
+
+    @pytest.fixture
+    def mock_mqtt_client(self):
+        """Create mock MQTT client."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_sup_util(self):
+        """Create mock support utilities."""
+        mock = MagicMock()
+        mock.config_obj = MagicMock()
+        mock.config_obj.broadcast_topic = "assistant/broadcast"
+        mock.mqtt_subscription_to_queue = {}
+        return mock
+
+    @pytest.fixture
+    def mock_message(self):
+        """Create mock MQTT message."""
+        message = MagicMock()
+        message.topic = MagicMock()
+        return message
+
+    async def test_listen_broadcast_with_satellites(self, mock_mqtt_client, mock_sup_util, mock_message):
+        """Test broadcast message forwarded to all connected satellites."""
+        # Setup satellite queues
+        queue1 = asyncio.Queue()
+        queue2 = asyncio.Queue()
+        mock_sup_util.mqtt_subscription_to_queue = {
+            "assistant/room1/output": queue1,
+            "assistant/room2/output": queue2,
+        }
+
+        # Setup broadcast message
+        mock_message.topic.value = "assistant/broadcast"
+        mock_message.payload = b'{"text": "test broadcast", "alert": null}'
+
+        # Mock client.messages to yield one message then stop
+        async def mock_messages():
+            yield mock_message
+
+        mock_mqtt_client.messages = mock_messages()
+
+        # Run listen (will process one message then exit)
+        with suppress(TimeoutError):
+            await asyncio.wait_for(listen(mock_mqtt_client, mock_sup_util), timeout=0.1)
+
+        # Verify message was forwarded to both satellites
+        assert queue1.qsize() == 1
+        assert queue2.qsize() == 1
+
+        response1 = await queue1.get()
+        response2 = await queue2.get()
+        assert response1.text == "test broadcast"
+        assert response2.text == "test broadcast"
+
+    async def test_listen_broadcast_no_satellites(self, mock_mqtt_client, mock_sup_util, mock_message, caplog):
+        """Test broadcast message with no satellites connected logs debug message."""
+        # No satellite queues
+        mock_sup_util.mqtt_subscription_to_queue = {}
+
+        # Setup broadcast message
+        mock_message.topic.value = "assistant/broadcast"
+        mock_message.payload = b'{"text": "test broadcast", "alert": null}'
+
+        async def mock_messages():
+            yield mock_message
+
+        mock_mqtt_client.messages = mock_messages()
+
+        with caplog.at_level(logging.DEBUG), suppress(TimeoutError):
+            await asyncio.wait_for(listen(mock_mqtt_client, mock_sup_util), timeout=0.1)
+
+        # Verify debug message logged (not warning)
+        assert "no satellites connected" in caplog.text
+        assert caplog.records[0].levelname == "DEBUG"
+
+    async def test_listen_broadcast_invalid_json(self, mock_mqtt_client, mock_sup_util, mock_message, caplog):
+        """Test broadcast message with invalid JSON logs error."""
+        # Setup satellite queue
+        queue1 = asyncio.Queue()
+        mock_sup_util.mqtt_subscription_to_queue = {"assistant/room1/output": queue1}
+
+        # Setup invalid broadcast message
+        mock_message.topic.value = "assistant/broadcast"
+        mock_message.payload = b"invalid json"
+
+        async def mock_messages():
+            yield mock_message
+
+        mock_mqtt_client.messages = mock_messages()
+
+        with caplog.at_level(logging.ERROR), suppress(TimeoutError):
+            await asyncio.wait_for(listen(mock_mqtt_client, mock_sup_util), timeout=0.1)
+
+        # Verify error logged and message not forwarded
+        assert "failed validation" in caplog.text.lower()
+        assert queue1.qsize() == 0
+
+    async def test_listen_non_broadcast_message(self, mock_mqtt_client, mock_sup_util, mock_message):
+        """Test non-broadcast message uses normal queue lookup."""
+        # Setup room-specific queue
+        room_queue = asyncio.Queue()
+        mock_sup_util.mqtt_subscription_to_queue = {"assistant/room1/output": room_queue}
+
+        # Setup non-broadcast message
+        mock_message.topic.value = "assistant/room1/output"
+        mock_message.payload = b'{"text": "room message", "alert": null}'
+
+        async def mock_messages():
+            yield mock_message
+
+        mock_mqtt_client.messages = mock_messages()
+
+        with suppress(TimeoutError):
+            await asyncio.wait_for(listen(mock_mqtt_client, mock_sup_util), timeout=0.1)
+
+        # Verify message went to correct queue
+        assert room_queue.qsize() == 1
+        response = await room_queue.get()
+        assert response.text == "room message"
+
+    async def test_listen_non_broadcast_no_queue(self, mock_mqtt_client, mock_sup_util, mock_message, caplog):
+        """Test non-broadcast message with no queue logs warning."""
+        # No queues registered
+        mock_sup_util.mqtt_subscription_to_queue = {}
+
+        # Setup non-broadcast message for unknown topic
+        mock_message.topic.value = "assistant/unknown/output"
+        mock_message.payload = b'{"text": "test", "alert": null}'
+
+        async def mock_messages():
+            yield mock_message
+
+        mock_mqtt_client.messages = mock_messages()
+
+        with caplog.at_level(logging.WARNING), suppress(TimeoutError):
+            await asyncio.wait_for(listen(mock_mqtt_client, mock_sup_util), timeout=0.1)
+
+        # Verify warning logged for unknown topic
+        assert "seems to have no queue" in caplog.text
+        assert caplog.records[0].levelname == "WARNING"
 
 
 class TestHTTPEndpoints:
