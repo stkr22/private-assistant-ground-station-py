@@ -8,7 +8,7 @@ version = "0.2.1"
 description = "Ground Station is an open-source endpoint that receives audio from satellites and handles STT/TTS processing for smart assistant systems."
 authors = [{ name = "stkr22", email = "stkr22@github.com" }]
 readme = "README.md"
-license = "GPL-3.0"
+license = "GPL-3.0-only"
 license-files = [
     "LICENSE",
 ]
