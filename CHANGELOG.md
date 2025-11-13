@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.3.0...v0.3.1) (2025-11-13)
+
+
+### Bug Fixes
+
+* 🐛 handle broadcast messages in listen() without dedicated queue ([485a1f9](https://github.com/stkr22/private-assistant-ground-station-py/commit/485a1f9aad2776cdf70541d81e978a9106e19ac6))
+* 🐛 handle broadcast messages in listen() without dedicated queue ([3b3e756](https://github.com/stkr22/private-assistant-ground-station-py/commit/3b3e756157dcb540be46b3b331144267bf831ba7))
+
 ## [0.3.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.2.1...v0.3.0) (2025-11-13)
 
 
