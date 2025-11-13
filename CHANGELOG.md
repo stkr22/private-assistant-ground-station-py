@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.2.1...v0.3.0) (2025-11-13)
+
+
+### Features
+
+* ✨ add PUT /text endpoint for non-satellite devices ([78a837c](https://github.com/stkr22/private-assistant-ground-station-py/commit/78a837c62ee380f4062815fb75f9f5979f587c82))
+
+
+### Bug Fixes
+
+* 🔧 update SPDX license identifier to GPL-3.0-only ([3537c80](https://github.com/stkr22/private-assistant-ground-station-py/commit/3537c80a421fb9ae1212422ffb206ea99338f982))
+
 ## [0.2.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.2.0...v0.2.1) (2025-10-23)
 
 
