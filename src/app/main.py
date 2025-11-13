@@ -67,7 +67,7 @@ async def listen(client: aiomqtt.Client, sup_util: support_utils.SupportUtils):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa: ARG001
+async def lifespan(app: FastAPI):  # noqa: ARG001, PLR0915
     sup_util.config_obj = config.load_config(
         pathlib.Path(os.getenv("PRIVATE_ASSISTANT_API_CONFIG_PATH", "local_config.yaml"))
     )
@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     max_reconnect_delay = 60  # Maximum delay in seconds
     task = None
 
-    async def connect_and_listen():
+    async def connect_and_listen():  # noqa: PLR0915
         """Connect to MQTT and listen for messages with automatic reconnection."""
         nonlocal reconnect_delay
 
@@ -98,11 +98,66 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
 
                     # Subscribe to broadcast topic
                     await client.subscribe(sup_util.config_obj.broadcast_topic, qos=1)
+
+                    # Create persistent broadcast queue for PUT /text and other non-satellite devices
+                    broadcast_queue: asyncio.Queue[messages.Response] = asyncio.Queue()
+                    sup_util.mqtt_subscription_to_queue[sup_util.config_obj.broadcast_topic] = broadcast_queue
+
+                    async def process_broadcast_queue(queue: asyncio.Queue[messages.Response]):
+                        """Process broadcast messages and forward to all connected satellites."""
+                        max_log_length = 100  # Maximum length for logged message text
+                        while True:
+                            try:
+                                response = await queue.get()
+                                # Forward to all connected satellite queues
+                                satellite_queues = [
+                                    (topic, q)
+                                    for topic, q in sup_util.mqtt_subscription_to_queue.items()
+                                    if topic != sup_util.config_obj.broadcast_topic and topic.endswith("/output")
+                                ]
+
+                                if satellite_queues:
+                                    logger.info(
+                                        "Broadcasting message to %d satellite(s): %s",
+                                        len(satellite_queues),
+                                        response.text[:max_log_length]
+                                        if len(response.text) > max_log_length
+                                        else response.text,
+                                    )
+                                    for topic, q in satellite_queues:
+                                        try:
+                                            await q.put(response)
+                                        except Exception as e:
+                                            logger.error("Failed to forward broadcast to %s: %s", topic, e)
+                                else:
+                                    logger.info(
+                                        "Broadcast message received (no active satellites): %s",
+                                        response.text[:max_log_length]
+                                        if len(response.text) > max_log_length
+                                        else response.text,
+                                    )
+                            except asyncio.CancelledError:
+                                break
+                            except Exception as e:
+                                logger.error("Error processing broadcast message: %s", e)
+
+                    # Start broadcast queue processor
+                    broadcast_task = asyncio.create_task(process_broadcast_queue(broadcast_queue))
+
                     logger.info("MQTT connected successfully")
                     reconnect_delay = 5  # Reset backoff on successful connection
 
-                    # Listen for messages
-                    await listen(client, sup_util=sup_util)
+                    try:
+                        # Listen for messages
+                        await listen(client, sup_util=sup_util)
+                    finally:
+                        # Clean up broadcast queue and task
+                        broadcast_task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await broadcast_task
+                        # Remove broadcast queue from registry
+                        if sup_util.config_obj.broadcast_topic in sup_util.mqtt_subscription_to_queue:
+                            del sup_util.mqtt_subscription_to_queue[sup_util.config_obj.broadcast_topic]
 
             except aiomqtt.MqttError as e:
                 sup_util.mqtt_connected = False
@@ -237,7 +292,8 @@ async def setup_satellite_connection(websocket: WebSocket):
     # Subscribe to client-specific topic (MQTT is guaranteed to be connected)
     await sup_util.mqtt_client.subscribe(output_topic, qos=1)
 
-    sup_util.mqtt_subscription_to_queue[sup_util.config_obj.broadcast_topic] = output_queue
+    # Note: Broadcast topic queue is managed globally in lifespan(), not per-satellite
+    # Satellites receive messages via their room-specific topics only
 
     # AIDEV-NOTE: New ground station protocol - handle satellite communication
     audio_processor = processing_sound.SatelliteAudioProcessor(
