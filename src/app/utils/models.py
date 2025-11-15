@@ -13,6 +13,7 @@ class TextMessageRequest(BaseModel):
 
     text: str
     device_id: str
+    remote: bool = False
 
 
 class TextMessageResponse(BaseModel):

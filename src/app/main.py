@@ -222,7 +222,9 @@ async def put_text_message(
         id=request_id,
         text=request.text,
         room=request.device_id,  # Use device_id as room identifier
-        output_topic=sup_util.config_obj.broadcast_topic,
+        output_topic=sup_util.config_obj.remote_broadcast_topic
+        if request.remote
+        else sup_util.config_obj.broadcast_topic,
     )
 
     # Publish to MQTT input topic
