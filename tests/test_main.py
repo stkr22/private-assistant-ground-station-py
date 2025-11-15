@@ -229,7 +229,7 @@ class TestHTTPEndpoints:
         """Test successful PUT /text endpoint."""
         # Setup mocks
         mock_config = MagicMock()
-        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.text_endpoint_auth_token = "TEST_TOKEN"
         mock_config.input_topic = "assistant/ground_station/input"
         mock_config.broadcast_topic = "assistant/ground_station/broadcast"
         sup_util._config_obj = mock_config
@@ -265,7 +265,7 @@ class TestHTTPEndpoints:
     def test_put_text_message_invalid_token(self, client):
         """Test PUT /text endpoint with invalid token."""
         mock_config = MagicMock()
-        mock_config.put_endpoint_token = "CORRECT_TOKEN"
+        mock_config.text_endpoint_auth_token = "CORRECT_TOKEN"
         sup_util._config_obj = mock_config
 
         response = client.put(
@@ -281,7 +281,7 @@ class TestHTTPEndpoints:
     def test_put_text_message_mqtt_unavailable(self, client):
         """Test PUT /text endpoint when MQTT is unavailable."""
         mock_config = MagicMock()
-        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.text_endpoint_auth_token = "TEST_TOKEN"
         sup_util._config_obj = mock_config
 
         response = client.put(
@@ -298,7 +298,7 @@ class TestHTTPEndpoints:
         """Test PUT /text endpoint when MQTT publish fails."""
         # Setup mocks
         mock_config = MagicMock()
-        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.text_endpoint_auth_token = "TEST_TOKEN"
         mock_config.input_topic = "assistant/ground_station/input"
         mock_config.broadcast_topic = "assistant/ground_station/broadcast"
         sup_util._config_obj = mock_config
@@ -323,7 +323,7 @@ class TestHTTPEndpoints:
         """Test PUT /text endpoint handles various Bearer token formats."""
         # Setup mocks
         mock_config = MagicMock()
-        mock_config.put_endpoint_token = "TEST_TOKEN"
+        mock_config.text_endpoint_auth_token = "TEST_TOKEN"
         mock_config.input_topic = "assistant/ground_station/input"
         mock_config.broadcast_topic = "assistant/ground_station/broadcast"
         sup_util._config_obj = mock_config

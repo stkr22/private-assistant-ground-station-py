@@ -207,7 +207,7 @@ async def put_text_message(
 
     # Extract token from "Bearer <token>" format
     token = authorization.removeprefix("Bearer ").strip()
-    if token != sup_util.config_obj.put_endpoint_token:
+    if token != sup_util.config_obj.text_endpoint_auth_token:
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
     # Check MQTT connection
@@ -222,7 +222,9 @@ async def put_text_message(
         id=request_id,
         text=request.text,
         room=request.device_id,  # Use device_id as room identifier
-        output_topic=sup_util.config_obj.broadcast_topic,
+        output_topic=sup_util.config_obj.remote_broadcast_topic
+        if request.remote
+        else sup_util.config_obj.broadcast_topic,
     )
 
     # Publish to MQTT input topic
