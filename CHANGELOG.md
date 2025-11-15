@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.3.2...v0.4.0) (2025-11-15)
+
+
+### Features
+
+* add remote_broadcast_topic for external notification ([080e104](https://github.com/stkr22/private-assistant-ground-station-py/commit/080e104c16e4174ade90178dfa13f7a7aa6167c8))
+
+
+### Bug Fixes
+
+* rename put_endpoint_token to text_endpoint_auth_token for clarity ([b96421b](https://github.com/stkr22/private-assistant-ground-station-py/commit/b96421b30fdb5ed6ba7d1307fdeecdd4d3042c7d))
+
 ## [0.3.2](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.3.1...v0.3.2) (2025-11-15)
 
 
