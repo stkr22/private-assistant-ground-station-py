@@ -207,7 +207,7 @@ async def put_text_message(
 
     # Extract token from "Bearer <token>" format
     token = authorization.removeprefix("Bearer ").strip()
-    if token != sup_util.config_obj.put_endpoint_token:
+    if token != sup_util.config_obj.text_endpoint_auth_token:
         raise HTTPException(status_code=401, detail="Invalid authentication token")
 
     # Check MQTT connection

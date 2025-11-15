@@ -21,7 +21,7 @@ class Config(BaseModel):
     base_topic_overwrite: str | None = None
     input_topic_overwrite: str | None = None
     output_topic_overwrite: str | None = None
-    put_endpoint_token: str = "DEBUG"
+    text_endpoint_auth_token: str = "DEBUG"
 
     @property
     def base_topic(self) -> str:
