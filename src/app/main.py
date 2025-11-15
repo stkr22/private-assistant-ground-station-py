@@ -292,16 +292,27 @@ async def handle_satellite_messages(websocket: WebSocket, audio_processor, outpu
         while True:
             message = await websocket.receive()
 
+            # Handle disconnect message explicitly
+            if message.get("type") == "websocket.disconnect":
+                logger.info("Received disconnect message from WebSocket")
+                break
+
             if "text" in message:
+                text_message = message["text"]
                 # Handle control signals from satellite
-                control_signal = message["text"]
-                await audio_processor.handle_control_signal(control_signal)
+                await audio_processor.handle_control_signal(text_message)
 
             elif "bytes" in message:
                 # Handle audio data from satellite
                 audio_bytes = message["bytes"]
                 await audio_processor.handle_audio_data(audio_bytes)
 
+    except RuntimeError as e:
+        # Handle "Cannot call receive once a disconnect message has been received"
+        if "disconnect message has been received" in str(e):
+            logger.info("WebSocket disconnected, stopping message loop")
+        else:
+            raise
     finally:
         mqtt_task.cancel()
         with suppress(asyncio.CancelledError):
@@ -325,28 +336,42 @@ async def websocket_endpoint(websocket: WebSocket):
 
     sup_util.active_connections[connection_id] = websocket
     output_topic = None
+    client_room = None
 
     try:
         client_conf, output_queue, audio_processor = await setup_satellite_connection(websocket)
         output_topic = client_conf.output_topic
+        client_room = client_conf.room
+        logger.info("Satellite connected: room=%s, topic=%s", client_room, output_topic)
         await handle_satellite_messages(websocket, audio_processor, output_queue, client_conf)
 
     except WebSocketDisconnect:
-        logger.info("Satellite disconnected")
+        logger.info("Satellite disconnected: room=%s", client_room or "unknown")
     except ValueError as e:
         logger.error("Configuration error: %s", e)
-        await websocket.close(code=1002)
+        with suppress(Exception):
+            await websocket.close(code=1002)
     except Exception as e:
         logger.exception("Unexpected error occurred: %s", e)
         with suppress(Exception):
             await websocket.close(code=1011)
     finally:
-        # Cleanup connection
+        # AIDEV-NOTE: Cleanup connection state to prevent stale references and queue buildup
+        # Remove from active connections immediately
         if connection_id in sup_util.active_connections:
             del sup_util.active_connections[connection_id]
-        # Cleanup MQTT subscription queue mapping
+            logger.debug("Removed connection %s from active connections", connection_id)
+
+        # Cleanup MQTT subscription queue mapping for satellite-specific topic
         if output_topic and output_topic in sup_util.mqtt_subscription_to_queue:
             del sup_util.mqtt_subscription_to_queue[output_topic]
+            logger.debug("Removed MQTT queue mapping for topic: %s", output_topic)
+
+        logger.info(
+            "Satellite cleanup complete: room=%s, active_connections=%d",
+            client_room or "unknown",
+            len(sup_util.active_connections),
+        )
 
 
 async def process_output_queue(
@@ -362,14 +387,21 @@ async def process_output_queue(
     try:
         while processed_count < max_process_per_cycle:
             response = output_queue.get_nowait()
-            audio_bytes = await speech_recognition_tools.send_text_to_tts_api(
-                response.text, config_obj, sample_rate=client_conf.samplerate
-            )
-            if response.alert is not None and response.alert.play_before:
-                await websocket.send_text("alert_default")
-            if audio_bytes is not None:
-                await websocket.send_bytes(audio_bytes)
-            processed_count += 1
+
+            # Validate WebSocket is still connected before sending
+            try:
+                audio_bytes = await speech_recognition_tools.send_text_to_tts_api(
+                    response.text, config_obj, sample_rate=client_conf.samplerate
+                )
+                if response.alert is not None and response.alert.play_before:
+                    await websocket.send_text("alert_default")
+                if audio_bytes is not None:
+                    await websocket.send_bytes(audio_bytes)
+                processed_count += 1
+            except (WebSocketDisconnect, RuntimeError) as e:
+                # Connection closed while processing, stop sending
+                logger.debug("WebSocket disconnected during send: %s", e)
+                break
 
     except asyncio.QueueEmpty:
         if processed_count > 0:
