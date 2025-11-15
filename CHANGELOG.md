@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.3.1...v0.3.2) (2025-11-15)
+
+
+### Bug Fixes
+
+* :recycle: simplify WebSocket disconnect handling [AI] ([e51f3e4](https://github.com/stkr22/private-assistant-ground-station-py/commit/e51f3e445bf5eb517d4830aa5f13e5d1dff6ff40))
+
 ## [0.3.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.3.0...v0.3.1) (2025-11-13)
 
 
