@@ -1,5 +1,5 @@
 # Build stage: Python 3.12.12-trixie
-FROM docker.io/library/python:3.12.12-trixie@sha256:872565c5ac89cafbab19419c699d80bda96e9d0f47a4790e5229bd3aeeeb5da9 AS build-python
+FROM docker.io/library/python:3.12.12-trixie@sha256:2b075cba87fcf51f14e6be18f83f209fb2013d72362ec874aed7d01933253e8b AS build-python
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
