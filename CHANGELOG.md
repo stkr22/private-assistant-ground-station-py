@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.4.0...v0.5.0) (2025-11-23)
+
+
+### Features
+
+* update Python version to 3.13.9 in Containerfile ([edebb17](https://github.com/stkr22/private-assistant-ground-station-py/commit/edebb17575ce410422fedd046beb8a1797ebf3d3))
+* update Python version to 3.13.9 in Containerfile ([2f28147](https://github.com/stkr22/private-assistant-ground-station-py/commit/2f28147151e9c8a85b11700061cd4a2367e3163c))
+
 ## [0.4.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.3.2...v0.4.0) (2025-11-15)
 
 
