@@ -99,7 +99,7 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     )
 
     # Load MQTT config from environment variables (with defaults)
-    sup_util.mqtt_config = MqttConfig(host="localhost", port=1883)
+    sup_util.mqtt_config = MqttConfig()
 
     # AIDEV-NOTE: Reconnection loop with exponential backoff for MQTT resilience
     reconnect_delay = 5  # Initial delay in seconds
