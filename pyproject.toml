@@ -27,11 +27,11 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "httpx~=0.28.1",
     "pyyaml~=6.0.1",
-    "pydantic~=2.9.0",
-    "private-assistant-commons~=5.2.2",
+    "pydantic",
+    "private-assistant-commons~=5.4.0",
     "fastapi[standard]~=0.119.1",
-    "aiomqtt~=2.4.0",
-    "numpy~=2.3.2",
+    "aiomqtt",
+    "numpy",
 ]
 
 [project.urls]

@@ -57,23 +57,61 @@ First message from satellite must be client configuration:
 
 ## Configuration
 
-### Ground Station Config (YAML)
+The ground station uses two separate configuration sources:
+1. **Application Config (YAML)** - Ground station-specific settings
+2. **MQTT Config (Environment Variables)** - MQTT broker connection settings
+
+### Application Config (YAML)
+
+Configuration file specified via `PRIVATE_ASSISTANT_API_CONFIG_PATH` environment variable (defaults to `local_config.yaml`):
 
 ```yaml
+# Speech API endpoints
 speech_transcription_api: "http://localhost:8000/transcribe"
 speech_transcription_api_token: null
-speech_synthesis_api: "http://localhost:8080/synthesizeSpeech" 
+speech_synthesis_api: "http://localhost:8080/synthesizeSpeech"
 speech_synthesis_api_token: null
-client_id: "ground-station-01"
+
+# Client identification
+client_id: "ground-station-01"  # Defaults to hostname if not specified
+
+# Ground station settings
 max_command_input_seconds: 30
-mqtt_server_host: "localhost"
-mqtt_server_port: 1883
-broadcast_topic: "assistant/ground_station/broadcast"
-base_topic_overwrite: null
-input_topic_overwrite: null  
+
+# Topic overrides (optional)
+remote_broadcast_topic: "assistant/ground_station/remote_broadcast"
+client_topic_overwrite: null  # Override computed client_topic
+input_topic_overwrite: null
 output_topic_overwrite: null
-error_audio_path: "/app/assets/error_beep.wav"
+
+# Authentication
+text_endpoint_auth_token: "DEBUG"
 ```
+
+### MQTT Configuration (Environment Variables)
+
+MQTT broker connection settings are configured via environment variables:
+
+```bash
+export MQTT_HOST=localhost        # MQTT broker hostname
+export MQTT_PORT=1883            # MQTT broker port
+export MQTT_USERNAME=user        # Optional: authentication username
+export MQTT_PASSWORD=pass        # Optional: authentication password
+```
+
+**Defaults** (used when environment variables are not set):
+- `MQTT_HOST`: localhost
+- `MQTT_PORT`: 1883
+- `MQTT_USERNAME`: null
+- `MQTT_PASSWORD`: null
+
+### Inherited Configuration from Commons
+
+Ground station extends `private-assistant-commons.SkillConfig` and inherits:
+- `broadcast_topic`: "assistant/broadcast" (used for forwarding messages to all satellites)
+- `intent_analysis_result_topic`: "assistant/intent_engine/result"
+- `device_update_topic`: "assistant/global_device_update"
+- `intent_cache_size`: 1000
 
 ### Removed Configuration Options
 
@@ -89,8 +127,9 @@ These options were removed as they're no longer needed:
 
 ### Topic Structure
 - Input: `assistant/ground_station/all/{client_id}/input`
-- Output: `assistant/{room}/output` 
-- Broadcast: `assistant/ground_station/broadcast`
+- Output: `assistant/{room}/output`
+- Broadcast: `assistant/broadcast` (inherited from commons.SkillConfig)
+- Remote Broadcast: `assistant/ground_station/remote_broadcast`
 
 ### Message Format
 Ground station publishes `ClientRequest` messages to MQTT:

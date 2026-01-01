@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import yaml
+from private_assistant_commons import MqttConfig
 
 from app.utils.config import Config
 
@@ -16,10 +17,9 @@ def temp_config_file():
     config_data = {
         "speech_transcription_api": "http://localhost:8000/transcribe",
         "speech_synthesis_api": "http://localhost:8080/synthesizeSpeech",
-        "mqtt_server_host": "localhost",
-        "mqtt_server_port": 1883,
         "max_command_input_seconds": 30,
         "client_id": "test-ground-station",
+        # MQTT fields removed - loaded separately via MqttConfig
     }
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -40,11 +40,16 @@ def test_config():
         speech_transcription_api_token="test-stt-token",
         speech_synthesis_api="http://test-tts:8080/synthesize",
         speech_synthesis_api_token="test-tts-token",
-        mqtt_server_host="test-mqtt",
-        mqtt_server_port=1883,
         max_command_input_seconds=15,
         client_id="test-station",
+        # MQTT fields removed - use test_mqtt_config fixture for MQTT settings
     )
+
+
+@pytest.fixture
+def test_mqtt_config():
+    """Create a test MQTT configuration instance."""
+    return MqttConfig(host="test-mqtt", port=1883)
 
 
 @pytest.fixture

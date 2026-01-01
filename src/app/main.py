@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager, suppress
 import aiomqtt
 import pydantic
 from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
-from private_assistant_commons import messages
+from private_assistant_commons import MqttConfig, messages
 
 from app.utils import (
     client_config,
@@ -93,9 +93,13 @@ async def listen(client: aiomqtt.Client, sup_util: support_utils.SupportUtils):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ARG001
+    # Load app config from YAML
     sup_util.config_obj = config.load_config(
         pathlib.Path(os.getenv("PRIVATE_ASSISTANT_API_CONFIG_PATH", "local_config.yaml"))
     )
+
+    # Load MQTT config from environment variables (with defaults)
+    sup_util.mqtt_config = MqttConfig(host="localhost", port=1883)
 
     # AIDEV-NOTE: Reconnection loop with exponential backoff for MQTT resilience
     reconnect_delay = 5  # Initial delay in seconds
@@ -110,12 +114,15 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
             try:
                 logger.info(
                     "Connecting to MQTT broker at %s:%s",
-                    sup_util.config_obj.mqtt_server_host,
-                    sup_util.config_obj.mqtt_server_port,
+                    sup_util.mqtt_config.host,
+                    sup_util.mqtt_config.port,
                 )
 
                 async with aiomqtt.Client(
-                    hostname=sup_util.config_obj.mqtt_server_host, port=sup_util.config_obj.mqtt_server_port
+                    hostname=sup_util.mqtt_config.host,
+                    port=sup_util.mqtt_config.port,
+                    username=sup_util.mqtt_config.username,
+                    password=sup_util.mqtt_config.password,
                 ) as client:
                     # Make client globally available
                     sup_util.mqtt_client = client
