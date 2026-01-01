@@ -4,6 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from private_assistant_commons import MqttConfig
 
 from app.utils.config import Config
 from app.utils.support_utils import SupportUtils
@@ -20,6 +21,7 @@ class TestSupportUtils:
     def test_initialization(self, support_utils):
         """Test SupportUtils initialization."""
         assert support_utils._config_obj is None
+        assert support_utils._mqtt_config is None
         assert support_utils._mqtt_client is None
         assert support_utils.mqtt_subscription_to_queue == {}
         assert support_utils.active_connections == {}
@@ -47,6 +49,20 @@ class TestSupportUtils:
         support_utils.mqtt_client = mock_client
 
         assert support_utils.mqtt_client is mock_client
+
+    def test_mqtt_config_property_not_set(self, support_utils):
+        """Test mqtt_config property when not set."""
+        with pytest.raises(ValueError, match="MQTT config is not set"):
+            _ = support_utils.mqtt_config
+
+    def test_mqtt_config_property_set(self, support_utils):
+        """Test mqtt_config property when set."""
+        mqtt_config = MqttConfig(host="test-mqtt", port=1883)
+        support_utils.mqtt_config = mqtt_config
+
+        assert support_utils.mqtt_config is mqtt_config
+        assert support_utils.mqtt_config.host == "test-mqtt"
+        assert support_utils.mqtt_config.port == 1883  # noqa: PLR2004
 
     def test_mqtt_subscription_management(self, support_utils):
         """Test MQTT subscription queue management."""
@@ -104,14 +120,17 @@ class TestSupportUtils:
         for topic, queue in subscriptions.items():
             assert support_utils.mqtt_subscription_to_queue[topic] is queue
 
-    def test_config_and_client_integration(self, support_utils):
-        """Test setting both config and MQTT client."""
-        config = Config(mqtt_server_host="test-host", mqtt_server_port=9999)
+    def test_config_and_mqtt_integration(self, support_utils):
+        """Test setting config, MQTT config, and MQTT client."""
+        config = Config(client_id="test-station")
+        mqtt_config = MqttConfig(host="test-host", port=9999)
         mock_client = AsyncMock()
 
         support_utils.config_obj = config
+        support_utils.mqtt_config = mqtt_config
         support_utils.mqtt_client = mock_client
 
-        assert support_utils.config_obj.mqtt_server_host == "test-host"
-        assert support_utils.config_obj.mqtt_server_port == 9999  # noqa: PLR2004
+        assert support_utils.config_obj.client_id == "test-station"
+        assert support_utils.mqtt_config.host == "test-host"
+        assert support_utils.mqtt_config.port == 9999  # noqa: PLR2004
         assert support_utils.mqtt_client is mock_client
