@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.5.0...v0.6.0) (2026-01-01)
+
+
+### Features
+
+* :recycle: refactor config to use commons 5.4.0 [AI] ([87dfc4c](https://github.com/stkr22/private-assistant-ground-station-py/commit/87dfc4c422a049ce2d8ab452dfa5690ac6ce0ea1))
+* :recycle: refactor config to use commons 5.4.0 [AI] ([c45a304](https://github.com/stkr22/private-assistant-ground-station-py/commit/c45a304903eab9b813ecd748b66c92bba6142c62))
+* :sparkles: update MQTT config initialization for improved flexibility ([f5708c4](https://github.com/stkr22/private-assistant-ground-station-py/commit/f5708c4e06024edf8a50c8f65928cd7aa87d9c90))
+
 ## [0.5.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.4.0...v0.5.0) (2025-11-23)
 
 
