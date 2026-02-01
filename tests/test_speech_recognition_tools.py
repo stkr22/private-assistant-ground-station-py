@@ -24,8 +24,8 @@ class TestUtilityFunctions:
 
         # Test specific conversions
         assert float_data[0] == 0.0  # 0 -> 0.0
-        assert abs(float_data[1] - 0.5) < 0.01  # 16384 -> ~0.5  # noqa: PLR2004
-        assert abs(float_data[2] - 1.0) < 0.01  # 32767 -> ~1.0  # noqa: PLR2004
+        assert abs(float_data[1] - 0.5) < 0.01  # 16384 -> ~0.5
+        assert abs(float_data[2] - 1.0) < 0.01  # 32767 -> ~1.0
 
     def test_int2float_zero_array(self):
         """Test conversion with all zeros."""
@@ -41,8 +41,8 @@ class TestUtilityFunctions:
         float_data = int2float(int_data)
 
         # Should be normalized to approximately ±1.0
-        assert abs(float_data[0] - 1.0) < 0.01  # noqa: PLR2004
-        assert abs(float_data[1] + 1.0) < 0.01  # noqa: PLR2004
+        assert abs(float_data[0] - 1.0) < 0.01
+        assert abs(float_data[1] + 1.0) < 0.01
 
 
 class TestSTTResponse:
@@ -122,7 +122,7 @@ class TestSendAudioToSTTAPI:
         mock_client.post.side_effect = httpx.TimeoutException("Request timed out")
         mock_client_class.return_value.__aenter__.return_value = mock_client
 
-        result = await send_audio_to_stt_api(audio_data, config, timeout=1.0)
+        result = await send_audio_to_stt_api(audio_data, config)
 
         assert result is None
 
@@ -208,7 +208,7 @@ class TestSendTextToTTSAPI:
         call_args = mock_client.post.call_args
         assert call_args[1]["url"] == config.speech_synthesis_api
         assert call_args[1]["json"]["text"] == "hello world"
-        assert call_args[1]["json"]["sample_rate"] == 22050  # noqa: PLR2004
+        assert call_args[1]["json"]["sample_rate"] == 22050
         assert call_args[1]["headers"]["user-token"] == "tts-token-456"
 
     @patch("app.utils.speech_recognition_tools.httpx.AsyncClient")
@@ -233,7 +233,7 @@ class TestSendTextToTTSAPI:
         mock_client.post.side_effect = httpx.TimeoutException("Request timed out")
         mock_client_class.return_value.__aenter__.return_value = mock_client
 
-        result = await send_text_to_tts_api("test", config, timeout=0.5)
+        result = await send_text_to_tts_api("test", config)
 
         assert result is None
 
@@ -288,4 +288,4 @@ class TestSendTextToTTSAPI:
 
         # Verify default sample rate
         call_args = mock_client.post.call_args
-        assert call_args[1]["json"]["sample_rate"] == 16000  # noqa: PLR2004
+        assert call_args[1]["json"]["sample_rate"] == 16000

@@ -62,7 +62,7 @@ class TestSupportUtils:
 
         assert support_utils.mqtt_config is mqtt_config
         assert support_utils.mqtt_config.host == "test-mqtt"
-        assert support_utils.mqtt_config.port == 1883  # noqa: PLR2004
+        assert support_utils.mqtt_config.port == 1883
 
     def test_mqtt_subscription_management(self, support_utils):
         """Test MQTT subscription queue management."""
@@ -98,7 +98,7 @@ class TestSupportUtils:
             support_utils.active_connections[connection_id] = mock_websocket
             connections[connection_id] = mock_websocket
 
-        assert len(support_utils.active_connections) == 5  # noqa: PLR2004
+        assert len(support_utils.active_connections) == 5
 
         # Verify all connections are present
         for connection_id, websocket in connections.items():
@@ -114,7 +114,7 @@ class TestSupportUtils:
             support_utils.mqtt_subscription_to_queue[topic] = queue
             subscriptions[topic] = queue
 
-        assert len(support_utils.mqtt_subscription_to_queue) == 3  # noqa: PLR2004
+        assert len(support_utils.mqtt_subscription_to_queue) == 3
 
         # Verify all subscriptions are present
         for topic, queue in subscriptions.items():
@@ -132,5 +132,5 @@ class TestSupportUtils:
 
         assert support_utils.config_obj.client_id == "test-station"
         assert support_utils.mqtt_config.host == "test-host"
-        assert support_utils.mqtt_config.port == 9999  # noqa: PLR2004
+        assert support_utils.mqtt_config.port == 9999
         assert support_utils.mqtt_client is mock_client

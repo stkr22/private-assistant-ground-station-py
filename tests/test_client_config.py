@@ -15,10 +15,10 @@ class TestClientConfig:
             samplerate=16000, input_channels=1, output_channels=1, chunk_size=1024, room="living_room"
         )
 
-        assert config.samplerate == 16000  # noqa: PLR2004
+        assert config.samplerate == 16000
         assert config.input_channels == 1
         assert config.output_channels == 1
-        assert config.chunk_size == 1024  # noqa: PLR2004
+        assert config.chunk_size == 1024
         assert config.room == "living_room"
         assert config.output_topic == ""
 
@@ -51,7 +51,7 @@ class TestClientConfig:
 
         config = ClientConfig.model_validate(data)
 
-        assert config.samplerate == 22050  # noqa: PLR2004
+        assert config.samplerate == 22050
         assert config.room == "kitchen"
 
     def test_client_config_serialization(self):
@@ -60,6 +60,6 @@ class TestClientConfig:
 
         data = config.model_dump()
 
-        assert data["samplerate"] == 16000  # noqa: PLR2004
+        assert data["samplerate"] == 16000
         assert data["room"] == "office"
         assert "output_topic" in data

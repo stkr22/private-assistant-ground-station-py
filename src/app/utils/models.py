@@ -9,6 +9,7 @@ class TextMessageRequest(BaseModel):
     Attributes:
         text: The transcribed text from the device
         device_id: Unique identifier for the device sending the request
+
     """
 
     text: str
@@ -22,6 +23,7 @@ class TextMessageResponse(BaseModel):
     Attributes:
         status: Status of the request (e.g., 'accepted')
         request_id: Unique identifier for tracking the request
+
     """
 
     status: str
