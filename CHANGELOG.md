@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.6.0...v0.6.1) (2026-02-01)
+
+
+### Bug Fixes
+
+* :rotating_light: fix all ruff, mypy, and pre-commit issues ([3d2aa56](https://github.com/stkr22/private-assistant-ground-station-py/commit/3d2aa56026d191e4c54d01ab10cfbd3515f7e82c))
+* :rotating_light: fix all ruff, mypy, and pre-commit issues ([772cfd4](https://github.com/stkr22/private-assistant-ground-station-py/commit/772cfd4174ac51146dcf12dc1924b9e85dc5fd17))
+
 ## [0.6.0](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.5.0...v0.6.0) (2026-01-01)
 
 
