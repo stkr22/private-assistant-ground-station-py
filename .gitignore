@@ -1,4 +1,7 @@
 local_config.*
+# claude
+settings.local.json
+
 # Python version file
 _version.py
 

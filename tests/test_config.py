@@ -19,7 +19,7 @@ class TestConfig:
 
         assert config.speech_transcription_api == "http://localhost:8000/transcribe"
         assert config.speech_synthesis_api == "http://localhost:8080/synthesizeSpeech"
-        assert config.max_command_input_seconds == 30  # noqa: PLR2004
+        assert config.max_command_input_seconds == 30
         # broadcast_topic inherited from CommonsSkillConfig
         assert config.broadcast_topic == "assistant/broadcast"
         # MQTT config is loaded separately, not part of Config
@@ -62,7 +62,7 @@ class TestConfig:
 
             assert config.speech_transcription_api == "http://test:8000/stt"
             assert config.speech_synthesis_api == "http://test:8080/tts"
-            assert config.max_command_input_seconds == 60  # noqa: PLR2004
+            assert config.max_command_input_seconds == 60
             assert config.client_id == "test-station"
         finally:
             config_path.unlink()
@@ -88,7 +88,7 @@ class TestMqttConfig:
         mqtt_config = MqttConfig(host="localhost", port=1883)
 
         assert mqtt_config.host == "localhost"
-        assert mqtt_config.port == 1883  # noqa: PLR2004
+        assert mqtt_config.port == 1883
         assert mqtt_config.username is None
         assert mqtt_config.password is None
 
@@ -97,7 +97,7 @@ class TestMqttConfig:
         mqtt_config = MqttConfig(host="secure-broker", port=8883, username="test-user", password="test-pass")
 
         assert mqtt_config.host == "secure-broker"
-        assert mqtt_config.port == 8883  # noqa: PLR2004
+        assert mqtt_config.port == 8883
         assert mqtt_config.username == "test-user"
         assert mqtt_config.password == "test-pass"
 
@@ -106,4 +106,4 @@ class TestMqttConfig:
         mqtt_config = MqttConfig(host="mqtt.example.com", port=1883)
 
         assert mqtt_config.host == "mqtt.example.com"
-        assert mqtt_config.port == 1883  # noqa: PLR2004
+        assert mqtt_config.port == 1883

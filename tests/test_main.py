@@ -201,28 +201,28 @@ class TestHTTPEndpoints:
     def test_health_endpoint(self, client):
         """Test health endpoint."""
         response = client.get("/health")
-        assert response.status_code == 200  # noqa: PLR2004
+        assert response.status_code == 200
         assert response.json() == {"status": "healthy"}
 
     @patch("app.main.sup_util.active_connections", {})
     def test_accepts_connections_empty(self, client):
         """Test accepts connections endpoint with no active connections."""
         response = client.get("/acceptsConnections")
-        assert response.status_code == 200  # noqa: PLR2004
+        assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ready"
         assert data["active_connections"] == 0
-        assert data["max_connections"] == 50  # noqa: PLR2004
+        assert data["max_connections"] == 50
 
     @patch("app.main.sup_util.active_connections", {1: "ws1", 2: "ws2"})
     def test_accepts_connections_with_connections(self, client):
         """Test accepts connections endpoint with active connections."""
         response = client.get("/acceptsConnections")
-        assert response.status_code == 200  # noqa: PLR2004
+        assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ready"
-        assert data["active_connections"] == 2  # noqa: PLR2004
-        assert data["max_connections"] == 50  # noqa: PLR2004
+        assert data["active_connections"] == 2
+        assert data["max_connections"] == 50
 
     @patch("app.main.sup_util.mqtt_connected", True)
     def test_put_text_message_success(self, client):
@@ -246,7 +246,7 @@ class TestHTTPEndpoints:
         )
 
         # Verify response
-        assert response.status_code == 200  # noqa: PLR2004
+        assert response.status_code == 200
         data = response.json()
         assert data["status"] == "accepted"
         assert "request_id" in data
@@ -259,7 +259,7 @@ class TestHTTPEndpoints:
             json={"text": "test message", "device_id": "test_device"},
         )
 
-        assert response.status_code == 401  # noqa: PLR2004
+        assert response.status_code == 401
         assert response.json()["detail"] == "Missing Authorization header"
 
     def test_put_text_message_invalid_token(self, client):
@@ -274,7 +274,7 @@ class TestHTTPEndpoints:
             headers={"Authorization": "Bearer WRONG_TOKEN"},
         )
 
-        assert response.status_code == 401  # noqa: PLR2004
+        assert response.status_code == 401
         assert response.json()["detail"] == "Invalid authentication token"
 
     @patch("app.main.sup_util.mqtt_connected", False)
@@ -290,7 +290,7 @@ class TestHTTPEndpoints:
             headers={"Authorization": "Bearer TEST_TOKEN"},
         )
 
-        assert response.status_code == 503  # noqa: PLR2004
+        assert response.status_code == 503
         assert response.json()["detail"] == "MQTT broker unavailable"
 
     @patch("app.main.sup_util.mqtt_connected", True)
@@ -315,7 +315,7 @@ class TestHTTPEndpoints:
         )
 
         # Verify response
-        assert response.status_code == 503  # noqa: PLR2004
+        assert response.status_code == 503
         assert "Failed to publish message to MQTT broker" in response.json()["detail"]
 
     @patch("app.main.sup_util.mqtt_connected", True)
@@ -339,7 +339,7 @@ class TestHTTPEndpoints:
             headers={"Authorization": "Bearer  TEST_TOKEN  "},
         )
 
-        assert response.status_code == 200  # noqa: PLR2004
+        assert response.status_code == 200
 
     def test_put_text_message_invalid_request_body(self, client):
         """Test PUT /text endpoint with invalid request body."""
@@ -349,7 +349,7 @@ class TestHTTPEndpoints:
             headers={"Authorization": "Bearer TEST_TOKEN"},
         )
 
-        assert response.status_code == 422  # noqa: PLR2004  # Unprocessable Entity
+        assert response.status_code == 422  # Unprocessable Entity
 
 
 class TestWebSocketHandling:

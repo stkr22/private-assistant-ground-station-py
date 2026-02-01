@@ -1,3 +1,5 @@
+"""Support utilities for managing application state and connections."""
+
 from __future__ import annotations
 
 import logging
@@ -16,7 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class SupportUtils:
+    """Utility class for managing shared application state and resources."""
+
     def __init__(self) -> None:
+        """Initialize support utilities with empty state."""
         self._config_obj: config.Config | None = None
         self._mqtt_config: MqttConfig | None = None
         self._mqtt_client: mqtt.Client | None = None
@@ -26,6 +31,7 @@ class SupportUtils:
 
     @property
     def config_obj(self) -> config.Config:
+        """Get ground station configuration object."""
         if self._config_obj is None:
             raise ValueError("Config object is not set")
         return self._config_obj
@@ -36,6 +42,7 @@ class SupportUtils:
 
     @property
     def mqtt_config(self) -> MqttConfig:
+        """Get MQTT configuration object."""
         if self._mqtt_config is None:
             raise ValueError("MQTT config is not set")
         return self._mqtt_config
@@ -46,6 +53,7 @@ class SupportUtils:
 
     @property
     def mqtt_client(self) -> mqtt.Client:
+        """Get MQTT client instance."""
         if self._mqtt_client is None:
             raise ValueError("MQTT client is not set")
         return self._mqtt_client

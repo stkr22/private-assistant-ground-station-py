@@ -1,3 +1,5 @@
+"""Audio processing for satellite connections."""
+
 import logging
 import math
 import uuid
@@ -19,6 +21,8 @@ from app.utils import (
 
 
 class ProcessingState(Enum):
+    """States for audio processing workflow."""
+
     IDLE = "idle"
     COLLECTING_AUDIO = "collecting_audio"
     PROCESSING_STT = "processing_stt"
@@ -26,6 +30,8 @@ class ProcessingState(Enum):
 
 @dataclass
 class AudioConfig:
+    """Configuration for audio buffer management."""
+
     max_frames: int
     max_buffer_size: int = 1024 * 1024  # 1MB max buffer size
 
@@ -41,6 +47,7 @@ class SatelliteAudioProcessor:
         logger: logging.Logger,
         sup_util: support_utils.SupportUtils,
     ) -> None:
+        """Initialize the satellite audio processor."""
         self.websocket = websocket
         self.config_obj = config_obj
         self.client_conf = client_conf

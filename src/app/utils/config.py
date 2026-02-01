@@ -1,3 +1,5 @@
+"""Configuration management for the ground station application."""
+
 import logging
 import socket
 from pathlib import Path
@@ -65,6 +67,7 @@ class Config(CommonsSkillConfig):
 
 
 def load_config(config_path: Path) -> Config:
+    """Load ground station configuration from YAML file."""
     try:
         with config_path.open("r") as file:
             config_data = yaml.safe_load(file)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Ground station FastAPI application for managing satellite connections and MQTT communication."""
 
 import asyncio
 import logging
@@ -7,10 +8,12 @@ import pathlib
 import sys
 import uuid
 from contextlib import asynccontextmanager, suppress
+from typing import Annotated
 
 import aiomqtt
 import pydantic
-from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.params import Header
 from private_assistant_commons import MqttConfig, messages
 
 from app.utils import (
@@ -46,8 +49,7 @@ def decode_message_payload(payload) -> str | None:
 
 
 async def listen(client: aiomqtt.Client, sup_util: support_utils.SupportUtils):
-    """
-    Listen for MQTT messages and route them to appropriate queues.
+    """Listen for MQTT messages and route them to appropriate queues.
 
     Note: If connection is lost during iteration, aiomqtt.MqttError will be raised
     and caught by the reconnection loop in lifespan().
@@ -93,6 +95,7 @@ async def listen(client: aiomqtt.Client, sup_util: support_utils.SupportUtils):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ARG001
+    """Manage application lifespan with MQTT connection and automatic reconnection."""
     # Load app config from YAML
     sup_util.config_obj = config.load_config(
         pathlib.Path(os.getenv("PRIVATE_ASSISTANT_API_CONFIG_PATH", "local_config.yaml"))
@@ -174,6 +177,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 async def health() -> dict:
+    """Check application health status."""
     return {"status": "healthy"}
 
 
@@ -190,10 +194,9 @@ async def accepts_connection():
 @app.put("/text")
 async def put_text_message(
     request: models.TextMessageRequest,
-    authorization: str | None = Header(None),
+    authorization: Annotated[str | None, Header()] = None,
 ) -> models.TextMessageResponse:
-    """
-    Accept transcribed text from external devices (e.g., Apple Watch).
+    """Accept transcribed text from external devices (e.g., Apple Watch).
 
     Publishes the text to MQTT with the broadcast topic as output_topic,
     allowing any WebSocket-connected devices at home to receive the response.
@@ -207,6 +210,7 @@ async def put_text_message(
 
     Raises:
         HTTPException: 401 if unauthorized, 503 if MQTT unavailable
+
     """
     # Validate authentication token
     if authorization is None:
@@ -258,7 +262,7 @@ async def put_text_message(
 
 
 async def setup_satellite_connection(websocket: WebSocket):
-    """Setup MQTT and audio processor for satellite connection."""
+    """Set up MQTT and audio processor for satellite connection."""
     client_config_raw = await websocket.receive_json()
     client_conf = client_config.ClientConfig.model_validate(client_config_raw)
 
@@ -330,6 +334,7 @@ async def handle_satellite_messages(websocket: WebSocket, audio_processor, outpu
 
 @app.websocket("/satellite")
 async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for satellite connections."""
     connection_id = id(websocket)
     if connection_id in sup_util.active_connections:
         await websocket.close(code=1001, reason="Connection already exists")
@@ -389,6 +394,7 @@ async def process_output_queue(
     config_obj: config.Config,
     client_conf: client_config.ClientConfig,
 ):
+    """Process MQTT output queue and send audio responses to satellite."""
     # AIDEV-NOTE: Optimized to process all available messages to reduce queue buildup
     processed_count = 0
     max_process_per_cycle = 3  # Limit processing to prevent blocking audio

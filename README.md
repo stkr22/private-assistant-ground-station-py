@@ -1,12 +1,10 @@
 # Private Assistant Ground Station
 
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border-orange.json)](https://github.com/copier-org/copier)
-[![python](https://img.shields.io/badge/Python-3.12-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff)](#)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v0.json)](https://github.com/charliermarsh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
-
-Owner: stkr22
 
 ## Ground Station: Central Audio Processing Hub
 
@@ -19,7 +17,7 @@ The system follows a hub-and-spoke architecture where satellites handle wake wor
 **Ground Station (`app/main.py`):**
 - FastAPI-based WebSocket server supporting multiple satellite connections
 - Handles speech-to-text (STT) and text-to-speech (TTS) API calls
-- Communicates with MQTT broker for assistant integration  
+- Communicates with MQTT broker for assistant integration
 - Processes audio only after wake word detection by satellites
 - Provides error feedback to satellites via audio beeps
 

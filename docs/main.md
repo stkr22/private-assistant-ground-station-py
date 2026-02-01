@@ -17,7 +17,7 @@ The Private Assistant Ground Station is a centralized audio processing hub that 
 **Current (Ground Station):**
 - Multiple satellite connections
 - Wake word detection on satellites
-- No VAD processing on ground station  
+- No VAD processing on ground station
 - Audio buffering only after wake word detected
 
 ## WebSocket Protocol
@@ -137,7 +137,7 @@ Ground station publishes `ClientRequest` messages to MQTT:
 {
   "id": "uuid-here",
   "text": "transcribed speech text",
-  "room": "living_room", 
+  "room": "living_room",
   "output_topic": "assistant/living_room/output"
 }
 ```
@@ -172,7 +172,7 @@ The ground station supports multiple concurrent satellite connections:
 
 ### Limitations
 - **Network Dependency**: Requires reliable connection to satellites
-- **Audio Buffering**: Slight delay due to buffering requirement  
+- **Audio Buffering**: Slight delay due to buffering requirement
 - **Single Point of Failure**: All satellites depend on ground station
 
 ## Development Notes
