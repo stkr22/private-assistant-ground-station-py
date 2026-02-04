@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.6.1...v0.6.2) (2026-02-04)
+
+
+### Bug Fixes
+
+* adding underscores to topics with spaces ([66c7aff](https://github.com/stkr22/private-assistant-ground-station-py/commit/66c7aff00874fc8e7fbe8aff6b762db60b40c784))
+
 ## [0.6.1](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.6.0...v0.6.1) (2026-02-01)
 
 
