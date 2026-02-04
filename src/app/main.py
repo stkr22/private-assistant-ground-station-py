@@ -268,7 +268,7 @@ async def setup_satellite_connection(websocket: WebSocket):
 
     # Setup MQTT subscription for this client
     output_queue: asyncio.Queue[messages.Response] = asyncio.Queue()
-    output_topic = f"assistant/{client_conf.room}/output"
+    output_topic = f"assistant/{client_conf.room.replace(' ', '_')}/output"
     client_conf.output_topic = output_topic
     sup_util.mqtt_subscription_to_queue[output_topic] = output_queue
 
