@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.3](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.6.2...v0.6.3) (2026-02-07)
+
+
+### Bug Fixes
+
+* :bug: prevent race condition in MQTT queue cleanup on satellite reconnect ([c07c40c](https://github.com/stkr22/private-assistant-ground-station-py/commit/c07c40c30d1393f1e6a28b60713ca3669f481980))
+* :bug: prevent race condition in MQTT queue cleanup on satellite reconnect ([0f9ce4a](https://github.com/stkr22/private-assistant-ground-station-py/commit/0f9ce4aaf010e8d84fc4a0ad284630db6e0a22cf))
+
 ## [0.6.2](https://github.com/stkr22/private-assistant-ground-station-py/compare/v0.6.1...v0.6.2) (2026-02-04)
 
 
