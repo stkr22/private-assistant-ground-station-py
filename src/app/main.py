@@ -152,6 +152,11 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
                     except Exception as close_error:
                         logger.warning("Error closing WebSocket: %s", close_error)
 
+                # Clear stale queue mappings since all WebSocket connections are being closed.
+                # The WebSocket finally blocks will also attempt cleanup, but clearing here
+                # ensures no stale entries persist across MQTT reconnections.
+                sup_util.mqtt_subscription_to_queue.clear()
+
                 await asyncio.sleep(reconnect_delay)
                 # Exponential backoff with maximum limit
                 reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
@@ -275,8 +280,6 @@ async def setup_satellite_connection(websocket: WebSocket):
     # Subscribe to client-specific topic (MQTT is guaranteed to be connected)
     await sup_util.mqtt_client.subscribe(output_topic, qos=1)
 
-    sup_util.mqtt_subscription_to_queue[sup_util.config_obj.broadcast_topic] = output_queue
-
     # AIDEV-NOTE: New ground station protocol - handle satellite communication
     audio_processor = processing_sound.SatelliteAudioProcessor(
         websocket=websocket, config_obj=sup_util.config_obj, client_conf=client_conf, logger=logger, sup_util=sup_util
@@ -350,6 +353,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     sup_util.active_connections[connection_id] = websocket
     output_topic = None
+    output_queue = None
     client_room = None
 
     try:
@@ -376,8 +380,15 @@ async def websocket_endpoint(websocket: WebSocket):
             del sup_util.active_connections[connection_id]
             logger.debug("Removed connection %s from active connections", connection_id)
 
-        # Cleanup MQTT subscription queue mapping for satellite-specific topic
-        if output_topic and output_topic in sup_util.mqtt_subscription_to_queue:
+        # Cleanup MQTT subscription queue mapping for satellite-specific topic.
+        # Only delete if the mapping still points to THIS connection's queue (identity check).
+        # This prevents a reconnecting satellite's new queue from being deleted by the
+        # old connection's cleanup.
+        if (
+            output_topic
+            and output_queue is not None
+            and sup_util.mqtt_subscription_to_queue.get(output_topic) is output_queue
+        ):
             del sup_util.mqtt_subscription_to_queue[output_topic]
             logger.debug("Removed MQTT queue mapping for topic: %s", output_topic)
 
