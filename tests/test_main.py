@@ -407,6 +407,9 @@ class TestWebSocketHandling:
         # Verify MQTT subscription
         mock_sup_util.mqtt_client.subscribe.assert_called_once_with("assistant/test_room/output", qos=1)
 
+        # Verify broadcast topic is NOT added to queue dict (it's handled separately in listen())
+        assert "test/broadcast" not in mock_sup_util.mqtt_subscription_to_queue
+
     async def test_setup_satellite_connection_invalid_config(self, mock_websocket):
         """Test satellite connection setup with invalid config."""
         # Setup invalid config data
@@ -499,6 +502,69 @@ class TestWebSocketEndpoint:
         # so we can't easily verify the exact call, but we can verify
         # the connection is cleaned up
         assert len(mock_sup_util.active_connections) == 0
+
+    @patch("app.main.setup_satellite_connection")
+    @patch("app.main.handle_satellite_messages")
+    @patch("app.main.sup_util")
+    async def test_websocket_cleanup_does_not_delete_new_queue(
+        self, mock_sup_util, mock_handle_messages, mock_setup, mock_websocket
+    ):
+        """Test that cleanup of old connection does not delete a newer connection's queue."""
+        old_queue = asyncio.Queue()
+        new_queue = asyncio.Queue()
+        topic = "assistant/bedroom/output"
+
+        real_queue_dict = {topic: old_queue}
+        mock_sup_util.mqtt_subscription_to_queue = real_queue_dict
+        mock_sup_util.active_connections = {}
+        mock_sup_util.mqtt_connected = True
+
+        mock_client_conf = MagicMock()
+        mock_client_conf.output_topic = topic
+        mock_client_conf.room = "bedroom"
+        mock_audio_processor = MagicMock()
+
+        mock_setup.return_value = (mock_client_conf, old_queue, mock_audio_processor)
+
+        async def simulate_reconnect(*_args, **_kwargs):
+            # While the old connection is "handling messages", a new connection overwrites the queue
+            real_queue_dict[topic] = new_queue
+
+        mock_handle_messages.side_effect = simulate_reconnect
+
+        await websocket_endpoint(mock_websocket)
+
+        # The new_queue should still be in the dict -- old cleanup must NOT have deleted it
+        assert topic in real_queue_dict
+        assert real_queue_dict[topic] is new_queue
+
+    @patch("app.main.setup_satellite_connection")
+    @patch("app.main.handle_satellite_messages")
+    @patch("app.main.sup_util")
+    async def test_websocket_cleanup_deletes_own_queue(
+        self, mock_sup_util, mock_handle_messages, mock_setup, mock_websocket
+    ):
+        """Test that cleanup deletes the queue when it still belongs to this connection."""
+        own_queue = asyncio.Queue()
+        topic = "assistant/living_room/output"
+
+        real_queue_dict = {topic: own_queue}
+        mock_sup_util.mqtt_subscription_to_queue = real_queue_dict
+        mock_sup_util.active_connections = {}
+        mock_sup_util.mqtt_connected = True
+
+        mock_client_conf = MagicMock()
+        mock_client_conf.output_topic = topic
+        mock_client_conf.room = "living_room"
+        mock_audio_processor = MagicMock()
+
+        mock_setup.return_value = (mock_client_conf, own_queue, mock_audio_processor)
+        mock_handle_messages.return_value = None
+
+        await websocket_endpoint(mock_websocket)
+
+        # Queue should be removed since no other connection overwrote it
+        assert topic not in real_queue_dict
 
 
 class TestMessageDecoding:
